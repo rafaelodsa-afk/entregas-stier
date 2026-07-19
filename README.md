@@ -17,15 +17,20 @@ e motoristas da frota própria.
 - Fluxo de status (aceitar → carregar → em rota → entregue), reportar problema
   (reentrega/devolvido/cancelado), e confirmar acerto financeiro
 
-## O que ainda falta (próximas fases, a seu pedido)
+- Tela de gerenciar usuários (criar/desativar acessos pela interface, sem
+  mexer no banco direto)
+- Upload de canhoto com armazenamento de arquivo real (foto/PDF), guardado no
+  Vercel Blob
+- Importar pedidos por planilha (.xlsx/.csv), com planilha modelo para baixar
+- Gráficos (panorama por status e por transportador) e mapa de entregas
+  pendentes (posição aproximada por cidade)
 
-- Upload de canhoto com armazenamento de arquivo real (foto/PDF)
-- Importar pedidos por planilha (.xlsx/.csv)
-- Gráficos (panorama e por transportador) e mapa de entregas pendentes
-- Tela de gerenciar usuários (criar/desativar acessos pela interface)
+## Próximos passos possíveis (a seu pedido)
 
-Essas peças já existem funcionando no protótipo interativo que fizemos antes —
-vamos portar uma de cada vez pra cá, como você preferir.
+- Domínio próprio (entregas.stier.com.br) — veja a seção 4 abaixo
+- Mapa com endereço exato (hoje é por cidade, não pela rua) — precisaria de
+  uma chave de API paga (Google Maps ou similar)
+- Editar/reatribuir usuários já criados (hoje só dá pra criar e desativar)
 
 ---
 
@@ -136,17 +141,28 @@ app/
   login/          → tela de login
   dashboard/
     admin/         → painel do admin/analista (vê tudo)
+      usuarios/     → gerenciar usuários (criar/desativar acessos)
+      graficos/     → gráficos e mapa de entregas pendentes
     operador/      → painel do transportador/motorista (só os próprios)
   api/
     auth/          → login e logout
-    pedidos/       → listar, criar, e atualizar pedidos
+    pedidos/       → listar, criar, atualizar e importar por planilha
+    usuarios/      → criar e desativar/reativar acessos
+    upload/        → autoriza o upload de canhoto (Vercel Blob)
 lib/
   auth.ts          → hash de senha, sessão (JWT em cookie)
   db.ts            → conexão com o banco (Prisma)
+  pedidos.ts       → regra de criar/reatribuir pedido (usada no cadastro manual e na importação)
+  geocodificacao.ts → busca e guarda em cache a coordenada aproximada de cada cidade (para o mapa)
 middleware.ts      → protege as rotas por login/papel
 prisma/
   schema.prisma    → estrutura do banco de dados
   seed.ts          → dados de demonstração
 ```
+
+Para rodar localmente com upload de canhoto funcionando, o `.env` também
+precisa de um `BLOB_READ_WRITE_TOKEN` (gerado automaticamente ao criar um
+Blob Store na Vercel e vinculá-lo ao projeto — rode `vercel env pull` depois
+disso para trazer o valor pro seu `.env.local`).
 
 Qualquer dúvida ou próximo passo, é só pedir por aqui.
