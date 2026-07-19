@@ -297,6 +297,37 @@ button {
   align-self: center;
 }
 
+.btn-importar {
+  background: var(--amber);
+  color: #1a1305;
+  border: none;
+  border-radius: 8px;
+  padding: 9px 16px;
+  font-weight: 800;
+  cursor: pointer;
+  font-size: 13px;
+}
+.btn-importar:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.resultado-import {
+  margin-top: 14px;
+  font-size: 13px;
+}
+.resultado-import p {
+  margin: 0 0 6px;
+  color: var(--teal);
+  font-weight: 700;
+}
+.erros-import {
+  margin: 0;
+  padding-left: 18px;
+  color: #ff9d8c;
+  font-size: 12.5px;
+  line-height: 1.7;
+}
+
 .muted {
   color: var(--muted);
   font-size: 12px;

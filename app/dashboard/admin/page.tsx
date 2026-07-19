@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { verifySession, COOKIE_NAME, podeVerTudo } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import PedidoAcoes, { BadgeStatus } from "@/components/PedidoAcoes";
+import ImportarPlanilha from "@/components/ImportarPlanilha";
 
 export const dynamic = "force-dynamic";
 
@@ -31,6 +32,8 @@ export default async function AdminDashboard() {
           <div className="kpi-label">Aguardando acerto</div>
         </div>
       </div>
+
+      <ImportarPlanilha />
 
       <table className="pedidos-table">
         <thead>
@@ -62,7 +65,7 @@ export default async function AdminDashboard() {
       <p className="aviso-fase">
         Fase 1 do desenvolvimento: login seguro, controle de acesso por papel, e o fluxo básico de
         pedidos já estão funcionando de verdade neste banco de dados. Próximas fases (a pedido de
-        vocês): importar planilha, e gráficos e mapa.
+        vocês): gráficos e mapa.
       </p>
     </div>
   );
