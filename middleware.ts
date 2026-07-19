@@ -1,0 +1,39 @@
+import { NextRequest, NextResponse } from "next/server";
+import { verifySession, COOKIE_NAME } from "@/lib/auth";
+
+// Rotas que qualquer visitante (sem login) pode acessar.
+const CAMINHOS_PUBLICOS = ["/login", "/api/auth/login"];
+
+export async function middleware(req: NextRequest) {
+  const { pathname } = req.nextUrl;
+
+  if (CAMINHOS_PUBLICOS.some((c) => pathname.startsWith(c))) {
+    return NextResponse.next();
+  }
+
+  const token = req.cookies.get(COOKIE_NAME)?.value;
+  const sessao = token ? await verifySession(token) : null;
+
+  if (!sessao) {
+    if (pathname.startsWith("/api")) {
+      return NextResponse.json({ erro: "Não autenticado" }, { status: 401 });
+    }
+    const loginUrl = new URL("/login", req.url);
+    return NextResponse.redirect(loginUrl);
+  }
+
+  // Repassa os dados da sessão já verificada para as rotas via headers,
+  // para as API routes não precisarem reabrir/revalidar o cookie sozinhas.
+  const headers = new Headers(req.headers);
+  headers.set("x-user-id", sessao.userId);
+  headers.set("x-user-username", sessao.username);
+  headers.set("x-user-papel", sessao.papel);
+  headers.set("x-user-nome", sessao.nome);
+  headers.set("x-user-transportador", sessao.transportadorNome ?? "");
+
+  return NextResponse.next({ request: { headers } });
+}
+
+export const config = {
+  matcher: ["/dashboard/:path*", "/api/:path*"],
+};

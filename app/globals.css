@@ -1,0 +1,297 @@
+:root {
+  --bg-page: #0b0d0f;
+  --bg-panel: #14171b;
+  --bg-panel-2: #181c21;
+  --line: #262b31;
+  --text: #edeff2;
+  --muted: #8d95a1;
+  --amber: #e3a73e;
+  --teal: #3fbf8f;
+  --red: #e15c4a;
+  --blue: #4e8fe3;
+  --violet: #a78bfa;
+  --orange: #f0883e;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg-page);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+}
+
+button {
+  font-family: inherit;
+}
+
+/* login */
+.login-wrap {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+.login-card {
+  background: var(--bg-panel);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 32px;
+  width: 100%;
+  max-width: 380px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.login-card h1 {
+  font-size: 18px;
+  margin: 0 0 4px;
+}
+.login-sub {
+  color: var(--muted);
+  font-size: 12.5px;
+  margin: 0 0 4px;
+}
+.login-card label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 600;
+}
+.login-card input {
+  background: var(--bg-panel-2);
+  border: 1px solid var(--line);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 14px;
+}
+.login-card button {
+  background: var(--amber);
+  color: #1a1305;
+  border: none;
+  border-radius: 9px;
+  padding: 11px;
+  font-weight: 800;
+  cursor: pointer;
+  font-size: 14px;
+}
+.login-card button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.erro {
+  background: rgba(225, 92, 74, 0.12);
+  border: 1px solid rgba(225, 92, 74, 0.4);
+  color: #ff9d8c;
+  font-size: 12.5px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  margin: 0;
+}
+
+/* shell */
+.app-shell {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 20px 60px;
+}
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 0;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 20px;
+}
+.brand {
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-size: 14px;
+}
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.btn-ghost {
+  background: transparent;
+  border: 1px solid var(--line);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 7px 12px;
+  cursor: pointer;
+  font-size: 12.5px;
+}
+.somente-leitura-aviso {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(78, 143, 227, 0.1);
+  border: 1px solid rgba(78, 143, 227, 0.3);
+  color: #8fb8f0;
+  font-size: 12px;
+  padding: 9px 13px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+}
+
+/* kpis */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.kpi-card {
+  background: var(--bg-panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 16px;
+}
+.kpi-card.amber {
+  border-color: rgba(227, 167, 62, 0.4);
+}
+.kpi-card.violet {
+  border-color: rgba(167, 139, 250, 0.4);
+}
+.kpi-value {
+  font-size: 26px;
+  font-weight: 800;
+}
+.kpi-label {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+/* tabela admin */
+.pedidos-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--bg-panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  overflow: hidden;
+  font-size: 13px;
+}
+.pedidos-table th,
+.pedidos-table td {
+  text-align: left;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--line);
+}
+.pedidos-table th {
+  color: var(--muted);
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 11px;
+}
+.pedidos-table tr:last-child td {
+  border-bottom: none;
+}
+
+.badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 9px;
+  border-radius: 20px;
+  background: rgba(227, 167, 62, 0.16);
+  color: var(--amber);
+  white-space: nowrap;
+}
+.badge-acerto {
+  background: rgba(167, 139, 250, 0.16);
+  color: var(--violet);
+}
+
+/* cards operador */
+.pedido-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.pedido-card {
+  background: var(--bg-panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 16px;
+}
+.pedido-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  font-size: 13px;
+  gap: 8px;
+}
+.pedido-numero {
+  font-weight: 800;
+  color: var(--amber);
+}
+.pedido-cliente {
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+.pedido-endereco {
+  color: var(--muted);
+  font-size: 12.5px;
+  margin-bottom: 10px;
+}
+.pedido-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.pedido-actions button,
+.acoes button {
+  background: var(--amber);
+  border: none;
+  color: #1a1305;
+  font-weight: 700;
+  padding: 8px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+}
+.pedido-actions button:disabled,
+.acoes button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.muted {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.aviso-fase {
+  margin-top: 28px;
+  padding: 14px 16px;
+  background: var(--bg-panel);
+  border: 1px dashed var(--line);
+  border-radius: 10px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+@media (max-width: 640px) {
+  .kpi-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .pedidos-table {
+    display: block;
+    overflow-x: auto;
+  }
+}

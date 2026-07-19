@@ -1,0 +1,92 @@
+// Schema do banco de dados — Stier Controle de Entregas
+// Documentação: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Papel {
+  MASTER // acesso principal, único, criado pelo seed
+  ADMIN // administrador (pode ganhar permissão de gerenciar usuários)
+  ANALISTA // acesso total exceto gerenciar usuários
+  TRANSPORTADOR // vê e mexe só nos próprios pedidos
+}
+
+enum TipoConta {
+  TRANSPORTADOR // transportador terceirizado
+  MOTORISTA // motorista da frota própria
+}
+
+enum StatusEntrega {
+  AGUARDANDO_ACEITE
+  AGUARDANDO_CARREGAMENTO
+  EM_ROTA
+  ENTREGUE
+  REENTREGA
+  CANCELADO
+  DEVOLVIDO
+}
+
+enum StatusFinanceiro {
+  NA
+  AGUARDANDO_ACERTO
+  PAGO
+}
+
+model Usuario {
+  id                String    @id @default(cuid())
+  username          String    @unique
+  senhaHash         String
+  nome              String
+  papel             Papel
+  tipoConta         TipoConta?
+  transportadorNome String?
+  podeCriarUsuarios Boolean   @default(false)
+  ativo             Boolean   @default(true)
+  criadoPor         String?
+  criadoEm          DateTime  @default(now())
+
+  @@index([papel])
+}
+
+model Pedido {
+  id                 String            @id // nº do pedido, vem da planilha
+  cliente            String
+  cidade             String            @default("")
+  bairro             String            @default("")
+  rua                String            @default("")
+  numero             String            @default("")
+  transportador      String
+  formaPagamento     String            @default("BOLETO")
+  valorPedido        Decimal           @default(0) @db.Decimal(12, 2)
+  prazo              String            @default("")
+  statusEntrega      StatusEntrega     @default(AGUARDANDO_ACEITE)
+  statusFinanceiro   StatusFinanceiro  @default(NA)
+  observacaoProblema String?
+  canhotoUrl         String?
+  canhotoTipo        String?
+  dataCriacao        DateTime          @default(now())
+  dataEntrega        DateTime?
+  acertoConfirmadoEm DateTime?
+  historico          HistoricoPedido[]
+
+  @@index([transportador])
+  @@index([statusEntrega])
+  @@index([statusFinanceiro])
+}
+
+model HistoricoPedido {
+  id       String   @id @default(cuid())
+  pedidoId String
+  pedido   Pedido   @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
+  status   String
+  usuario  String
+  data     DateTime @default(now())
+
+  @@index([pedidoId])
+}
