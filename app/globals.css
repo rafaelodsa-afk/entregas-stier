@@ -275,6 +275,89 @@ button {
   font-size: 12px;
 }
 
+/* gerenciar usuários */
+.page-title {
+  font-size: 20px;
+  margin: 4px 0 2px;
+}
+.page-sub {
+  color: var(--muted);
+  font-size: 13px;
+  margin: 0 0 20px;
+}
+.form-card {
+  background: var(--bg-panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 24px;
+}
+.form-card h2 {
+  font-size: 15px;
+  margin: 0 0 14px;
+}
+.form-card button[type="submit"] {
+  background: var(--amber);
+  color: #1a1305;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 18px;
+  font-weight: 800;
+  cursor: pointer;
+  font-size: 13.5px;
+  margin-top: 14px;
+}
+.form-card button[type="submit"]:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+}
+.form-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 600;
+}
+.form-grid input,
+.form-grid select {
+  background: var(--bg-panel-2);
+  border: 1px solid var(--line);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 9px 11px;
+  font-size: 13.5px;
+  font-family: inherit;
+}
+.checkbox-linha {
+  flex-direction: row !important;
+  align-items: center;
+  gap: 8px !important;
+  grid-column: 1 / -1;
+}
+.badge-ativo {
+  background: rgba(63, 191, 143, 0.16);
+  color: var(--teal);
+}
+.badge-inativo {
+  background: rgba(225, 92, 74, 0.16);
+  color: var(--red);
+}
+.usuarios-table .btn-ghost {
+  padding: 5px 10px;
+  font-size: 12px;
+}
+@media (max-width: 640px) {
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .aviso-fase {
   margin-top: 28px;
   padding: 14px 16px;

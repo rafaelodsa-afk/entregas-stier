@@ -36,6 +36,7 @@ export async function POST(req: NextRequest) {
     papel: usuario.papel,
     nome: usuario.nome,
     transportadorNome: usuario.transportadorNome,
+    podeCriarUsuarios: usuario.podeCriarUsuarios,
   });
 
   const resposta = NextResponse.json({

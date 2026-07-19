@@ -30,6 +30,7 @@ export async function middleware(req: NextRequest) {
   headers.set("x-user-papel", sessao.papel);
   headers.set("x-user-nome", sessao.nome);
   headers.set("x-user-transportador", sessao.transportadorNome ?? "");
+  headers.set("x-user-pode-criar-usuarios", sessao.podeCriarUsuarios ? "1" : "0");
 
   return NextResponse.next({ request: { headers } });
 }

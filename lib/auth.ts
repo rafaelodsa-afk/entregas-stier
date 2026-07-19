@@ -22,6 +22,7 @@ export type SessionPayload = {
   papel: "MASTER" | "ADMIN" | "ANALISTA" | "TRANSPORTADOR";
   nome: string;
   transportadorNome: string | null;
+  podeCriarUsuarios: boolean;
 };
 
 export async function signSession(payload: SessionPayload): Promise<string> {
