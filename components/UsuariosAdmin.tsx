@@ -12,7 +12,7 @@ type Usuario = {
   podeCriarUsuarios: boolean;
   ativo: boolean;
   criadoPor: string | null;
-  criadoEm: string;
+  criadoEm: Date;
 };
 
 const LABEL_PAPEL: Record<string, string> = {
