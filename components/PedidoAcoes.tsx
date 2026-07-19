@@ -21,6 +21,9 @@ const LABEL_STATUS: Record<string, string> = {
   DEVOLVIDO: "Devolvido",
 };
 
+// Só não dá pra anexar canhoto quando o pedido já chegou num desses estados finais.
+const STATUS_SEM_CANHOTO = ["ENTREGUE", "CANCELADO"];
+
 export function BadgeStatus({ status }: { status: string }) {
   return <span className="badge">{LABEL_STATUS[status] ?? status}</span>;
 }
@@ -56,9 +59,9 @@ export default function PedidoAcoes({ pedido, isAdmin = false }: { pedido: Pedid
     }
   }
 
-  async function finalizarComCanhoto() {
+  async function anexarCanhoto() {
     if (!canhoto) {
-      setErro("Selecione a foto ou PDF do canhoto antes de finalizar.");
+      setErro("Selecione a foto ou PDF do canhoto.");
       return;
     }
     setCarregando(true);
@@ -73,6 +76,7 @@ export default function PedidoAcoes({ pedido, isAdmin = false }: { pedido: Pedid
         canhotoUrl: blob.url,
         canhotoTipo: canhoto.type.startsWith("image/") ? "foto" : "pdf",
       });
+      setCanhoto(null);
       router.refresh();
     } catch (err: any) {
       console.error(err);
@@ -82,6 +86,32 @@ export default function PedidoAcoes({ pedido, isAdmin = false }: { pedido: Pedid
     }
   }
 
+  const podeAnexarCanhoto = !STATUS_SEM_CANHOTO.includes(pedido.statusEntrega);
+
+  const blocoCanhoto = podeAnexarCanhoto ? (
+    <div className="canhoto-upload">
+      <label className="canhoto-input-label">
+        {canhoto ? canhoto.name : "Anexar canhoto (foto/PDF)"}
+        <input
+          type="file"
+          accept="image/jpeg,image/png,image/webp,application/pdf"
+          capture="environment"
+          onChange={(e) => setCanhoto(e.target.files?.[0] ?? null)}
+          hidden
+        />
+      </label>
+      <button disabled={carregando || !canhoto} onClick={anexarCanhoto}>
+        {carregando ? "Enviando..." : "Anexar e marcar como entregue"}
+      </button>
+    </div>
+  ) : null;
+
+  const linkCanhoto = pedido.canhotoUrl ? (
+    <a className="link-canhoto" href={pedido.canhotoUrl} target="_blank" rel="noreferrer">
+      Ver canhoto
+    </a>
+  ) : null;
+
   if (isAdmin) {
     return (
       <div className="acoes">
@@ -90,11 +120,8 @@ export default function PedidoAcoes({ pedido, isAdmin = false }: { pedido: Pedid
             Confirmar acerto
           </button>
         )}
-        {pedido.canhotoUrl && (
-          <a className="link-canhoto" href={pedido.canhotoUrl} target="_blank" rel="noreferrer">
-            Ver canhoto
-          </a>
-        )}
+        {linkCanhoto}
+        {blocoCanhoto}
         {erro && <p className="erro" style={{ marginTop: 6 }}>{erro}</p>}
       </div>
     );
@@ -112,22 +139,8 @@ export default function PedidoAcoes({ pedido, isAdmin = false }: { pedido: Pedid
           Iniciar rota
         </button>
       )}
-      {pedido.statusEntrega === "EM_ROTA" && (
-        <div className="canhoto-upload">
-          <label className="canhoto-input-label">
-            {canhoto ? canhoto.name : "Escolher foto/PDF do canhoto"}
-            <input
-              type="file"
-              accept="image/jpeg,image/png,image/webp,application/pdf"
-              onChange={(e) => setCanhoto(e.target.files?.[0] ?? null)}
-              hidden
-            />
-          </label>
-          <button disabled={carregando || !canhoto} onClick={finalizarComCanhoto}>
-            {carregando ? "Enviando..." : "Finalizar entrega"}
-          </button>
-        </div>
-      )}
+      {blocoCanhoto}
+      {linkCanhoto}
       {erro && <p className="erro" style={{ marginTop: 6, width: "100%" }}>{erro}</p>}
     </div>
   );

@@ -132,6 +132,28 @@ button {
   cursor: pointer;
   font-size: 12.5px;
 }
+.nav-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid var(--line);
+}
+.nav-tab {
+  color: var(--muted);
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 10px 16px;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+.nav-tab:hover {
+  color: var(--text);
+}
+.nav-tab-ativa {
+  color: var(--amber);
+  border-bottom-color: var(--amber);
+}
 .somente-leitura-aviso {
   display: flex;
   align-items: center;
