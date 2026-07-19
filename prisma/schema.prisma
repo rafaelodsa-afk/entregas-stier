@@ -90,3 +90,12 @@ model HistoricoPedido {
 
   @@index([pedidoId])
 }
+
+// Cache de coordenadas por cidade (nome normalizado), para não precisar
+// consultar o serviço de geocodificação de novo a cada vez que o mapa carrega.
+model CidadeCoordenada {
+  cidade         String   @id
+  latitude       Float
+  longitude      Float
+  atualizadoEm   DateTime @default(now())
+}

@@ -416,6 +416,93 @@ button {
   }
 }
 
+/* gráficos e mapa */
+.graficos-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 16px;
+  align-items: start;
+}
+.grafico-donut-wrap {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+.grafico-donut-total {
+  fill: var(--text);
+  font-size: 26px;
+  font-weight: 800;
+}
+.grafico-donut-label {
+  fill: var(--muted);
+  font-size: 11px;
+}
+.grafico-legenda {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 12.5px;
+}
+.grafico-legenda li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.grafico-legenda strong {
+  margin-left: auto;
+}
+.legenda-cor {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+.grafico-barras {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.barra-linha {
+  display: grid;
+  grid-template-columns: 140px 1fr 32px;
+  align-items: center;
+  gap: 10px;
+  font-size: 12.5px;
+}
+.barra-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--muted);
+}
+.barra-trilho {
+  background: var(--bg-panel-2);
+  border-radius: 6px;
+  height: 12px;
+  overflow: hidden;
+}
+.barra-preenchida {
+  height: 100%;
+  border-radius: 6px;
+}
+.barra-valor {
+  text-align: right;
+  font-weight: 700;
+}
+@media (max-width: 720px) {
+  .graficos-grid {
+    grid-template-columns: 1fr;
+  }
+  .barra-linha {
+    grid-template-columns: 90px 1fr 28px;
+  }
+}
+
 .aviso-fase {
   margin-top: 28px;
   padding: 14px 16px;
