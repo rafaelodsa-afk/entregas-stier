@@ -62,7 +62,7 @@ export default async function AdminDashboard() {
       <p className="aviso-fase">
         Fase 1 do desenvolvimento: login seguro, controle de acesso por papel, e o fluxo básico de
         pedidos já estão funcionando de verdade neste banco de dados. Próximas fases (a pedido de
-        vocês): anexar canhoto com armazenamento de arquivo real, importar planilha, e gráficos e mapa.
+        vocês): importar planilha, e gráficos e mapa.
       </p>
     </div>
   );

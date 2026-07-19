@@ -41,10 +41,6 @@ export default async function OperadorDashboard() {
         ))}
       </div>
 
-      <p className="aviso-fase">
-        Nesta fase, "Finalizar entrega" ainda marca o pedido como entregue sem exigir foto do
-        canhoto — o upload de arquivo com armazenamento real é a próxima peça que vamos ligar.
-      </p>
     </div>
   );
 }
