@@ -2,7 +2,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { verifySession, COOKIE_NAME } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import PedidoAcoes, { BadgeStatus } from "@/components/PedidoAcoes";
+import ListaPedidosOperador from "@/components/ListaPedidosOperador";
 
 export const dynamic = "force-dynamic";
 
@@ -23,24 +23,22 @@ export default async function OperadorDashboard() {
       <h2 style={{ marginBottom: 4 }}>{sessao.transportadorNome}</h2>
       <p className="muted" style={{ marginBottom: 18 }}>{pendentes.length} pedido(s) pendente(s) de {pedidos.length} no total</p>
 
-      <div className="pedido-list">
-        {pedidos.length === 0 && <p className="muted">Nenhum pedido no momento.</p>}
-        {pedidos.map((p) => (
-          <div key={p.id} className="pedido-card">
-            <div className="pedido-card-top">
-              <span>
-                <span className="pedido-numero">#{p.id}</span> <BadgeStatus status={p.statusEntrega} statusPlanilha={p.statusPlanilha} />
-                {p.statusFinanceiro === "AGUARDANDO_ACERTO" && <span className="badge badge-acerto" style={{ marginLeft: 6 }}>Aguardando acerto</span>}
-              </span>
-              <span>{Number(p.valorPedido).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</span>
-            </div>
-            <div className="pedido-cliente">{p.cliente}</div>
-            <div className="pedido-endereco">{p.rua}, {p.numero} — {p.bairro}, {p.cidade}</div>
-            <PedidoAcoes pedido={p} />
-          </div>
-        ))}
-      </div>
-
+      <ListaPedidosOperador
+        pedidos={pedidos.map((p) => ({
+          id: p.id,
+          cliente: p.cliente,
+          cidade: p.cidade,
+          bairro: p.bairro,
+          rua: p.rua,
+          numero: p.numero,
+          valorPedido: Number(p.valorPedido),
+          statusEntrega: p.statusEntrega,
+          statusFinanceiro: p.statusFinanceiro,
+          statusPlanilha: p.statusPlanilha,
+          canhotoUrl: p.canhotoUrl,
+          comprovantePagamentoUrl: p.comprovantePagamentoUrl,
+        }))}
+      />
     </div>
   );
 }

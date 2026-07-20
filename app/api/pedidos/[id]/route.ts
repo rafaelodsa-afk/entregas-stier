@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { podeVerTudo } from "@/lib/auth";
-import { ehOperacaoDeVenda } from "@/lib/pedidos";
+import { geraPendenciaFinanceira } from "@/lib/pedidos";
 
 // Compara nomes de transportador ignorando maiúsculas/minúsculas e espaços
 // extras — pra um espaço a mais no cadastro não travar o próprio dono do
@@ -10,7 +10,6 @@ function mesmoTransportador(a: string, b: string) {
   return a.trim().toLowerCase() === b.trim().toLowerCase();
 }
 
-const PAGAMENTOS_A_VISTA = ["DINHEIRO", "PIX", "A VISTA", "AVISTA"];
 const STATUS_VALIDOS = [
   "AGUARDANDO_ACEITE",
   "AGUARDANDO_CARREGAMENTO",
@@ -66,10 +65,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       data.dataEntrega = new Date();
       // Só vira pendência financeira se for Venda (padrão quando a
       // planilha não informa operação) E o pagamento for à vista.
-      data.statusFinanceiro =
-        ehOperacaoDeVenda(pedido.operacao) && PAGAMENTOS_A_VISTA.includes((pedido.formaPagamento || "").toUpperCase())
-          ? "AGUARDANDO_ACERTO"
-          : "NA";
+      data.statusFinanceiro = geraPendenciaFinanceira(pedido.operacao, pedido.formaPagamento) ? "AGUARDANDO_ACERTO" : "NA";
       if (body.canhotoUrl) {
         data.canhotoUrl = body.canhotoUrl;
         data.canhotoTipo = body.canhotoTipo || "foto";

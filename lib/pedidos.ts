@@ -30,6 +30,19 @@ export function ehOperacaoDeVenda(operacao: unknown): boolean {
   return texto === "VENDA" || texto === "VENDAS";
 }
 
+const PAGAMENTOS_A_VISTA = ["DINHEIRO", "PIX", "A VISTA", "AVISTA"];
+
+export function ehPagamentoAVista(formaPagamento: unknown): boolean {
+  return PAGAMENTOS_A_VISTA.includes(String(formaPagamento ?? "").trim().toUpperCase());
+}
+
+// Mesma regra usada tanto pra gerar a pendência real (quando o canhoto é
+// anexado) quanto pra prever antecipadamente na aba Financeiro — Venda +
+// pagamento à vista, sem depender do status de entrega.
+export function geraPendenciaFinanceira(operacao: unknown, formaPagamento: unknown): boolean {
+  return ehOperacaoDeVenda(operacao) && ehPagamentoAVista(formaPagamento);
+}
+
 // Usado tanto pelo cadastro manual (um pedido por vez) quanto pela
 // importação de planilha (várias linhas), para manter a mesma regra de
 // negócio nos dois casos.
