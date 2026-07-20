@@ -1,36 +1,53 @@
-# Stier · Controle de Entregas (versão de produção — Fase 1)
+# Stier · Controle de Entregas
 
 Aplicativo real (Next.js + banco de dados Postgres + login com senha
 criptografada de verdade) para controle de entregas entre Stier, transportadores
-e motoristas da frota própria.
+e motoristas da frota própria. Publicado em produção e em uso.
 
-## O que já está pronto nesta fase
+## O que já está pronto
 
 - Login seguro (senha com hash bcrypt, sessão em cookie assinado — nada de
   senha em texto puro em lugar nenhum)
 - Banco de dados real (Postgres) guardando pedidos e usuários de verdade,
   com histórico de mudanças de status
-- Controle de acesso por papel:
+- Controle de acesso por papel, aplicado tanto nas telas quanto nas APIs:
   - **Transportador / Motorista**: só vê e mexe nos próprios pedidos
-  - **Admin / Master**: vê e mexe em tudo
+  - **Admin / Master**: vê e mexe em tudo, inclusive gerenciar usuários
   - **Analista da Stier**: vê e mexe em tudo, menos gerenciar usuários
 - Fluxo de status (aceitar → carregar → em rota → entregue), reportar problema
   (reentrega/devolvido/cancelado), e confirmar acerto financeiro
-
+- Menu de navegação fixo (Pedidos, Gráficos, Financeiro, Usuários) em todas
+  as telas do admin/analista
 - Tela de gerenciar usuários (criar/desativar acessos pela interface, sem
   mexer no banco direto)
-- Upload de canhoto com armazenamento de arquivo real (foto/PDF), guardado no
-  Vercel Blob
-- Importar pedidos por planilha (.xlsx/.csv), com planilha modelo para baixar
+- Upload de canhoto (foto ou PDF) direto na tabela de pedidos ou na tela do
+  transportador — abre a câmera no celular, guarda o arquivo de verdade no
+  Vercel Blob, marca o pedido como Entregue automaticamente e, se o
+  pagamento for dinheiro/PIX, já deixa como "Aguardando acerto"
+- Importar pedidos por planilha (.xlsx/.csv), lida inteiramente no navegador
+  (não trava com planilhas grandes) e com prévia antes de confirmar:
+  - Pedido novo → cria
+  - Pedido em reentrega (no sistema ou marcado assim na planilha) → reatribui
+    e volta pra "Aguardando aceite"
+  - Pedido já **Entregue** ou **Cancelado** no sistema → nunca é alterado
+  - Planilha avisando "Cancelado" → cancela o pedido
+  - Nada disso → ignora a linha, sem contar como erro
 - Gráficos (panorama por status e por transportador) e mapa de entregas
-  pendentes (posição aproximada por cidade)
+  pendentes (posição aproximada por cidade, sem precisar de chave de API paga)
+- Filtro por transportador nas telas de Pedidos, Gráficos e Financeiro
+  (mantido ao trocar de aba)
+- Aba Financeiro dedicada: pedidos aguardando acerto, total em aberto,
+  confirmar recebimento com um clique, e histórico do que já foi recebido
+- Busca (por nº ou cliente), filtro por status, e exclusão manual de pedidos
+  na tela de Pedidos (com confirmação antes de excluir)
 
 ## Próximos passos possíveis (a seu pedido)
 
 - Domínio próprio (entregas.stier.com.br) — veja a seção 4 abaixo
 - Mapa com endereço exato (hoje é por cidade, não pela rua) — precisaria de
   uma chave de API paga (Google Maps ou similar)
-- Editar/reatribuir usuários já criados (hoje só dá pra criar e desativar)
+- Editar pedidos já cadastrados diretamente pela tela (hoje dá pra excluir e
+  reimportar, mas não editar campo a campo)
 
 ---
 
@@ -54,6 +71,9 @@ Agora abra o `.env` e preencha:
 - `DATABASE_URL`: veja o passo 2 abaixo para conseguir essa string
 - `JWT_SECRET`: rode `openssl rand -base64 32` no terminal e cole o resultado
   (no Windows, pode gerar em https://generate-secret.vercel.app/32)
+- `BLOB_READ_WRITE_TOKEN`: necessário pro upload de canhoto funcionar. Gerado
+  automaticamente ao criar um Blob Store na Vercel e vinculá-lo ao projeto —
+  depois disso, rode `vercel env pull` pra trazer o valor pro seu `.env.local`
 
 ```bash
 # 4. Crie as tabelas no banco
@@ -97,6 +117,9 @@ passo 3 e volta aqui depois).
    - `DATABASE_URL` (a string de conexão do passo 2)
    - `JWT_SECRET` (o texto secreto que você gerou)
 5. Clique em Deploy
+6. Depois de publicado, crie um Blob Store em **Storage** no painel do
+   projeto e conecte ao projeto (isso adiciona o `BLOB_READ_WRITE_TOKEN`
+   automaticamente nas variáveis de ambiente de produção)
 
 O Vercel te dá uma URL tipo `stier-controle.vercel.app` já funcionando. Depois
 de publicado, rode uma vez (do seu computador, apontando pro banco de produção,
@@ -131,6 +154,9 @@ isso cria as tabelas e os usuários de demonstração no banco de produção.
 - Se algum dia migrar de servidor/serviço, gere um `JWT_SECRET` novo — isso
   derruba todas as sessões ativas (todo mundo precisa logar de novo), o que é
   o comportamento esperado e seguro.
+- A exclusão de pedidos (tela de Pedidos, botão "Excluir") é definitiva —
+  apaga também o histórico daquele pedido. Só admin/analista/master
+  conseguem excluir.
 
 ---
 
@@ -140,29 +166,32 @@ isso cria as tabelas e os usuários de demonstração no banco de produção.
 app/
   login/          → tela de login
   dashboard/
-    admin/         → painel do admin/analista (vê tudo)
+    admin/         → painel de pedidos do admin/analista (vê tudo)
       usuarios/     → gerenciar usuários (criar/desativar acessos)
       graficos/     → gráficos e mapa de entregas pendentes
+      financeiro/   → pedidos aguardando acerto e histórico de recebidos
     operador/      → painel do transportador/motorista (só os próprios)
   api/
     auth/          → login e logout
-    pedidos/       → listar, criar, atualizar e importar por planilha
+    pedidos/       → listar, criar, atualizar, excluir e importar por planilha
     usuarios/      → criar e desativar/reativar acessos
     upload/        → autoriza o upload de canhoto (Vercel Blob)
+components/
+  TabelaPedidos.tsx      → tabela de pedidos com busca, filtro de status e exclusão
+  PedidoAcoes.tsx        → botões de ação por pedido (aceitar, anexar canhoto, etc.)
+  FiltroTransportador.tsx → seletor de transportador (Pedidos, Gráficos, Financeiro)
+  FinanceiroTabela.tsx / FinanceiroHistorico.tsx → aba Financeiro
+  GraficoDonut.tsx / GraficoBarras.tsx / MapaEntregas.tsx → aba Gráficos
+  NavTabs.tsx            → menu de navegação fixo do topo
 lib/
-  auth.ts          → hash de senha, sessão (JWT em cookie)
+  auth.ts          → hash de senha, sessão (JWT em cookie), regras de permissão
   db.ts            → conexão com o banco (Prisma)
-  pedidos.ts       → regra de criar/reatribuir pedido (usada no cadastro manual e na importação)
+  pedidos.ts       → regras de criar/reatribuir/cancelar pedido (cadastro manual e importação)
   geocodificacao.ts → busca e guarda em cache a coordenada aproximada de cada cidade (para o mapa)
-middleware.ts      → protege as rotas por login/papel
+middleware.ts      → protege as rotas por login/papel (páginas e APIs)
 prisma/
   schema.prisma    → estrutura do banco de dados
   seed.ts          → dados de demonstração
 ```
-
-Para rodar localmente com upload de canhoto funcionando, o `.env` também
-precisa de um `BLOB_READ_WRITE_TOKEN` (gerado automaticamente ao criar um
-Blob Store na Vercel e vinculá-lo ao projeto — rode `vercel env pull` depois
-disso para trazer o valor pro seu `.env.local`).
 
 Qualquer dúvida ou próximo passo, é só pedir por aqui.
