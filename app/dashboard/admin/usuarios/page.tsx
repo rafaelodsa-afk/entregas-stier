@@ -22,6 +22,7 @@ export default async function UsuariosPage() {
       tipoConta: true,
       transportadorNome: true,
       podeCriarUsuarios: true,
+      precisaTrocarSenha: true,
       ativo: true,
       criadoPor: true,
       criadoEm: true,

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { hashPassword, podeGerenciarUsuariosPorPapel } from "@/lib/auth";
+import { hashPassword, podeGerenciarUsuariosPorPapel, senhaValida, MENSAGEM_REGRA_SENHA } from "@/lib/auth";
 
 const PAPEIS_CRIAVEIS = ["ADMIN", "ANALISTA", "TRANSPORTADOR"];
 const TIPOS_CONTA = ["TRANSPORTADOR", "MOTORISTA"];
@@ -24,6 +24,7 @@ const SELECT_SEGURO = {
   tipoConta: true,
   transportadorNome: true,
   podeCriarUsuarios: true,
+  precisaTrocarSenha: true,
   ativo: true,
   criadoPor: true,
   criadoEm: true,
@@ -57,14 +58,18 @@ export async function POST(req: NextRequest) {
 
   const username = String(body.username ?? "").trim().toLowerCase();
   const senha = String(body.senha ?? "");
+  const confirmarSenha = String(body.confirmarSenha ?? "");
   const nome = String(body.nome ?? "").trim();
   const papelNovo = String(body.papel ?? "").trim().toUpperCase();
 
   if (!username || !senha || !nome) {
     return NextResponse.json({ erro: "Preencha usuário, senha e nome" }, { status: 400 });
   }
-  if (senha.length < 6) {
-    return NextResponse.json({ erro: "A senha precisa ter pelo menos 6 caracteres" }, { status: 400 });
+  if (senha !== confirmarSenha) {
+    return NextResponse.json({ erro: "As senhas não coincidem" }, { status: 400 });
+  }
+  if (!senhaValida(senha)) {
+    return NextResponse.json({ erro: MENSAGEM_REGRA_SENHA }, { status: 400 });
   }
   if (!PAPEIS_CRIAVEIS.includes(papelNovo)) {
     return NextResponse.json({ erro: "Papel inválido" }, { status: 400 });
@@ -100,6 +105,7 @@ export async function POST(req: NextRequest) {
       tipoConta: tipoConta as any,
       transportadorNome,
       podeCriarUsuarios: podeCriarUsuariosNovo,
+      precisaTrocarSenha: true,
       criadoPor: req.headers.get("x-user-nome") ?? "sistema",
     },
     select: SELECT_SEGURO,

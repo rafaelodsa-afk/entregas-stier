@@ -23,7 +23,17 @@ export type SessionPayload = {
   nome: string;
   transportadorNome: string | null;
   podeCriarUsuarios: boolean;
+  precisaTrocarSenha: boolean;
 };
+
+export const MENSAGEM_REGRA_SENHA = "A senha precisa ter pelo menos 4 letras e 4 números";
+
+// Regra pedida: no mínimo 4 letras e 4 números (em qualquer ordem/posição).
+export function senhaValida(senha: string): boolean {
+  const letras = senha.match(/[a-zA-Z]/g)?.length ?? 0;
+  const numeros = senha.match(/[0-9]/g)?.length ?? 0;
+  return letras >= 4 && numeros >= 4;
+}
 
 export async function signSession(payload: SessionPayload): Promise<string> {
   return new SignJWT({ ...payload })

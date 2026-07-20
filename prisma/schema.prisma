@@ -47,6 +47,7 @@ model Usuario {
   tipoConta         TipoConta?
   transportadorNome String?
   podeCriarUsuarios Boolean   @default(false)
+  precisaTrocarSenha Boolean  @default(false)
   ativo             Boolean   @default(true)
   criadoPor         String?
   criadoEm          DateTime  @default(now())

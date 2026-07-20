@@ -37,6 +37,7 @@ export async function POST(req: NextRequest) {
     nome: usuario.nome,
     transportadorNome: usuario.transportadorNome,
     podeCriarUsuarios: usuario.podeCriarUsuarios,
+    precisaTrocarSenha: usuario.precisaTrocarSenha,
   });
 
   const resposta = NextResponse.json({
@@ -46,6 +47,7 @@ export async function POST(req: NextRequest) {
       papel: usuario.papel,
       transportadorNome: usuario.transportadorNome,
     },
+    precisaTrocarSenha: usuario.precisaTrocarSenha,
   });
 
   resposta.cookies.set(COOKIE_NAME, token, {
