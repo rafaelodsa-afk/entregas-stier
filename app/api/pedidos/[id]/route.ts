@@ -105,3 +105,24 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
   return NextResponse.json(atualizado);
 }
+
+export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+  const papel = (req.headers.get("x-user-papel") ?? "TRANSPORTADOR") as
+    | "MASTER"
+    | "ADMIN"
+    | "ANALISTA"
+    | "TRANSPORTADOR";
+  if (!podeVerTudo(papel)) {
+    return NextResponse.json({ erro: "Sem permissão para excluir pedidos" }, { status: 403 });
+  }
+
+  const pedido = await prisma.pedido.findUnique({ where: { id: params.id } });
+  if (!pedido) {
+    return NextResponse.json({ erro: "Pedido não encontrado" }, { status: 404 });
+  }
+
+  // HistoricoPedido é apagado junto (onDelete: Cascade no schema).
+  await prisma.pedido.delete({ where: { id: params.id } });
+
+  return NextResponse.json({ ok: true });
+}

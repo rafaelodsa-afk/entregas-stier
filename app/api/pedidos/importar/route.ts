@@ -36,9 +36,10 @@ export async function POST(req: NextRequest) {
 
   const novos = resultados.filter((r) => r.classificacao === "novo").length;
   const reatribuidos = resultados.filter((r) => r.classificacao === "reatribuido").length;
+  const canceladosPlanilha = resultados.filter((r) => r.classificacao === "cancelado_planilha").length;
   const ignorados = resultados
     .filter((r) => r.classificacao === "ignorado")
     .map((r) => ({ linha: r.linha, id: r.id, motivo: r.motivo }));
 
-  return NextResponse.json({ novos, reatribuidos, ignorados });
+  return NextResponse.json({ novos, reatribuidos, canceladosPlanilha, ignorados });
 }

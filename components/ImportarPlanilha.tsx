@@ -21,6 +21,7 @@ type LinhaImportada = {
 type Resumo = {
   novos: number;
   reatribuidos: number;
+  canceladosPlanilha: number;
   ignorados: { linha: number; id: string | null; motivo: string }[];
 };
 
@@ -214,11 +215,13 @@ export default function ImportarPlanilha() {
 
       {resumo && (
         <div className="resultado-import">
-          <p>
-            Resumo antes de confirmar: <strong>{resumo.novos}</strong> pedido(s) novo(s),{" "}
-            <strong>{resumo.reatribuidos}</strong> reatribuído(s) (estavam em reentrega)
-            {resumo.ignorados.length > 0 && <>, <strong>{resumo.ignorados.length}</strong> ignorado(s)</>}.
-          </p>
+          <p>Resumo antes de confirmar:</p>
+          <ul className="resumo-categorias">
+            <li><strong>{resumo.novos}</strong> novo(s)</li>
+            <li><strong>{resumo.reatribuidos}</strong> reatribuído(s) (reentrega)</li>
+            <li><strong>{resumo.canceladosPlanilha}</strong> cancelado(s) pela planilha</li>
+            <li><strong>{resumo.ignorados.length}</strong> ignorado(s) sem mudança</li>
+          </ul>
           {resumo.ignorados.length > 0 && (
             <ul className="erros-import">
               {resumo.ignorados.map((r, i) => (
@@ -231,7 +234,9 @@ export default function ImportarPlanilha() {
           )}
           <div className="canhoto-upload" style={{ marginTop: 12 }}>
             <button className="btn-importar" onClick={confirmar} disabled={carregando}>
-              {carregando ? "Importando..." : `Confirmar importação (${resumo.novos + resumo.reatribuidos} pedido(s))`}
+              {carregando
+                ? "Importando..."
+                : `Confirmar importação (${resumo.novos + resumo.reatribuidos + resumo.canceladosPlanilha} pedido(s))`}
             </button>
             <button className="btn-ghost" onClick={limpar} disabled={carregando}>
               Cancelar
@@ -242,11 +247,13 @@ export default function ImportarPlanilha() {
 
       {concluido && (
         <div className="resultado-import">
-          <p>
-            Importação concluída: <strong>{concluido.novos}</strong> pedido(s) criado(s),{" "}
-            <strong>{concluido.reatribuidos}</strong> reatribuído(s)
-            {concluido.ignorados.length > 0 && <>, <strong>{concluido.ignorados.length}</strong> ignorado(s)</>}.
-          </p>
+          <p>Importação concluída:</p>
+          <ul className="resumo-categorias">
+            <li><strong>{concluido.novos}</strong> criado(s)</li>
+            <li><strong>{concluido.reatribuidos}</strong> reatribuído(s)</li>
+            <li><strong>{concluido.canceladosPlanilha}</strong> cancelado(s) pela planilha</li>
+            <li><strong>{concluido.ignorados.length}</strong> ignorado(s) sem mudança</li>
+          </ul>
         </div>
       )}
     </div>

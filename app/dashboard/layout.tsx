@@ -13,6 +13,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   if (podeVerTudo(sessao.papel)) {
     abas.push({ href: "/dashboard/admin", label: "Pedidos" });
     abas.push({ href: "/dashboard/admin/graficos", label: "Gráficos" });
+    abas.push({ href: "/dashboard/admin/financeiro", label: "Financeiro" });
   }
   if (podeGerenciarUsuariosPorPapel(sessao.papel, sessao.podeCriarUsuarios)) {
     abas.push({ href: "/dashboard/admin/usuarios", label: "Usuários" });

@@ -2,22 +2,38 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { verifySession, COOKIE_NAME, podeVerTudo } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import PedidoAcoes, { BadgeStatus } from "@/components/PedidoAcoes";
 import ImportarPlanilha from "@/components/ImportarPlanilha";
+import FiltroTransportador from "@/components/FiltroTransportador";
+import TabelaPedidos from "@/components/TabelaPedidos";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminDashboard() {
+export default async function AdminDashboard({
+  searchParams,
+}: {
+  searchParams: { transportador?: string };
+}) {
   const token = cookies().get(COOKIE_NAME)?.value;
   const sessao = token ? await verifySession(token) : null;
   if (!sessao || !podeVerTudo(sessao.papel)) redirect("/login");
 
-  const pedidos = await prisma.pedido.findMany({ orderBy: { dataCriacao: "desc" } });
+  const todosPedidos = await prisma.pedido.findMany({ orderBy: { dataCriacao: "desc" } });
+  const transportadores = [...new Set(todosPedidos.map((p) => p.transportador))].sort();
+
+  const filtroTransportador = searchParams.transportador ?? "";
+  const pedidos = filtroTransportador
+    ? todosPedidos.filter((p) => p.transportador === filtroTransportador)
+    : todosPedidos;
+
   const pendentes = pedidos.filter((p) => !["ENTREGUE", "CANCELADO", "DEVOLVIDO", "REENTREGA"].includes(p.statusEntrega));
   const acerto = pedidos.filter((p) => p.statusFinanceiro === "AGUARDANDO_ACERTO");
 
   return (
     <div>
+      <div className="filtros-topo">
+        <FiltroTransportador transportadores={transportadores} />
+      </div>
+
       <div className="kpi-grid">
         <div className="kpi-card">
           <div className="kpi-value">{pedidos.length}</div>
@@ -35,33 +51,17 @@ export default async function AdminDashboard() {
 
       <ImportarPlanilha />
 
-      <table className="pedidos-table">
-        <thead>
-          <tr>
-            <th>Nº</th>
-            <th>Cliente</th>
-            <th>Transportador</th>
-            <th>Status</th>
-            <th>Financeiro</th>
-            <th>Valor</th>
-            <th>Ações</th>
-          </tr>
-        </thead>
-        <tbody>
-          {pedidos.map((p) => (
-            <tr key={p.id}>
-              <td>#{p.id}</td>
-              <td>{p.cliente}</td>
-              <td>{p.transportador}</td>
-              <td><BadgeStatus status={p.statusEntrega} /></td>
-              <td>{p.statusFinanceiro === "AGUARDANDO_ACERTO" ? <span className="badge badge-acerto">Aguardando acerto</span> : "—"}</td>
-              <td>{Number(p.valorPedido).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</td>
-              <td><PedidoAcoes pedido={p} isAdmin /></td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-
+      <TabelaPedidos
+        pedidos={pedidos.map((p) => ({
+          id: p.id,
+          cliente: p.cliente,
+          transportador: p.transportador,
+          statusEntrega: p.statusEntrega,
+          statusFinanceiro: p.statusFinanceiro,
+          valorPedido: Number(p.valorPedido),
+          canhotoUrl: p.canhotoUrl,
+        }))}
+      />
     </div>
   );
 }

@@ -71,29 +71,19 @@ export async function criarOuReatribuirPedido(linha: LinhaPedido, nomeUsuario: s
   return { ok: true as const, pedido, criado: false };
 }
 
-const LABEL_STATUS: Record<string, string> = {
-  AGUARDANDO_ACEITE: "Aguardando aceite",
-  AGUARDANDO_CARREGAMENTO: "Aguardando carregamento",
-  EM_ROTA: "Em rota de entrega",
-  ENTREGUE: "Entregue",
-  REENTREGA: "Reentrega",
-  CANCELADO: "Cancelado",
-  DEVOLVIDO: "Devolvido",
-};
-
-// Reconhece se o texto solto que veio na coluna opcional "Status de entrega"
-// da planilha já indica um pedido finalizado — nesse caso não importamos,
-// pra não inundar o sistema de histórico antigo se alguém subir a planilha
-// completa (com pedidos já entregues há meses, por exemplo).
-function statusPlanilhaIndicaFinalizado(valorCru: unknown): "ENTREGUE" | "CANCELADO" | null {
+// Reconhece o texto solto que veio na coluna opcional "Status de entrega" da
+// planilha. A ordem dos "includes" importa: "reentrega" contém a substring
+// "entreg", então precisa ser testada antes.
+function interpretarStatusPlanilha(valorCru: unknown): "ENTREGUE" | "CANCELADO" | "REENTREGA" | null {
   const texto = String(valorCru ?? "")
     .normalize("NFD")
     .replace(new RegExp(String.fromCharCode(0x5b) + "\\u0300-\\u036f" + String.fromCharCode(0x5d), "g"), "")
     .toLowerCase()
     .trim();
   if (!texto) return null;
-  if (texto.includes("entreg")) return "ENTREGUE";
+  if (texto.includes("reentreg")) return "REENTREGA";
   if (texto.includes("cancel")) return "CANCELADO";
+  if (texto.includes("entreg")) return "ENTREGUE";
   return null;
 }
 
@@ -105,12 +95,49 @@ export type LinhaImportada = LinhaPedido & {
 export type ResultadoLinhaImportacao =
   | { linha: number; id: string; classificacao: "novo" }
   | { linha: number; id: string; classificacao: "reatribuido" }
+  | { linha: number; id: string; classificacao: "cancelado_planilha" }
   | { linha: number; id: string | null; classificacao: "ignorado"; motivo: string };
+
+async function reatribuirPedido(id: string, dados: ReturnType<typeof montarDados>, transportadorAnterior: string, nomeUsuario: string) {
+  await prisma.pedido.update({
+    where: { id },
+    data: { ...dados, statusEntrega: "AGUARDANDO_ACEITE", statusFinanceiro: "NA", dataEntrega: null, observacaoProblema: null },
+  });
+  await prisma.historicoPedido.create({
+    data: {
+      pedidoId: id,
+      status: "AGUARDANDO_ACEITE",
+      usuario: `${nomeUsuario} (reatribuído de ${transportadorAnterior} para ${dados.transportador})`,
+    },
+  });
+}
+
+function montarDados(linha: LinhaImportada, cliente: string, transportador: string) {
+  return {
+    cliente,
+    cidade: String(linha.cidade ?? "").trim(),
+    bairro: String(linha.bairro ?? "").trim(),
+    rua: String(linha.rua ?? "").trim(),
+    numero: String(linha.numero ?? "").trim(),
+    transportador,
+    formaPagamento: String(linha.formaPagamento ?? "BOLETO").trim().toUpperCase(),
+    valorPedido: Number(linha.valorPedido) || 0,
+    prazo: String(linha.prazo ?? "").trim(),
+  };
+}
 
 // Classifica (e, se gravar=true, também executa) a importação em massa de
 // pedidos. Roda em dois modos com a mesma lógica: modo prévia (gravar=false,
 // só olha o banco e diz o que ia acontecer) e modo confirmação (gravar=true,
 // aplica de verdade) — assim a prévia nunca fica dessincronizada da ação real.
+//
+// Prioridade das regras para um pedido que já existe no banco (nessa ordem):
+//   1. Já está ENTREGUE  → nunca mexe, protegido pra sempre.
+//   2. Já está CANCELADO → nunca mexe, já está encerrado.
+//   3. Já está REENTREGA (ou a planilha diz "Reentrega") → reatribui, volta
+//      pra "Aguardando aceite" com os dados novos da linha.
+//   4. Planilha diz "Cancelado" → cancela o pedido no sistema.
+//   5. Nada disso → ignora, não faz nada (não é erro).
 export async function processarImportacao(
   linhas: LinhaImportada[],
   nomeUsuario: string,
@@ -133,32 +160,22 @@ export async function processarImportacao(
       continue;
     }
 
-    const statusFinalizado = statusPlanilhaIndicaFinalizado(linha.statusEntregaPlanilha);
-    if (statusFinalizado) {
-      resultados.push({
-        linha: linha.linha,
-        id,
-        classificacao: "ignorado",
-        motivo: `A planilha já traz esse pedido como "${statusFinalizado === "ENTREGUE" ? "Entregue" : "Cancelado"}"`,
-      });
-      continue;
-    }
-
-    const dados = {
-      cliente,
-      cidade: String(linha.cidade ?? "").trim(),
-      bairro: String(linha.bairro ?? "").trim(),
-      rua: String(linha.rua ?? "").trim(),
-      numero: String(linha.numero ?? "").trim(),
-      transportador,
-      formaPagamento: String(linha.formaPagamento ?? "BOLETO").trim().toUpperCase(),
-      valorPedido: Number(linha.valorPedido) || 0,
-      prazo: String(linha.prazo ?? "").trim(),
-    };
-
+    const statusPlanilha = interpretarStatusPlanilha(linha.statusEntregaPlanilha);
+    const dados = montarDados(linha, cliente, transportador);
     const existente = await prisma.pedido.findUnique({ where: { id } });
 
     if (!existente) {
+      // Pedido novo — se a planilha já traz ele como finalizado, não cria
+      // (evita importar pedidos antigos já resolvidos de uma planilha completa).
+      if (statusPlanilha === "ENTREGUE" || statusPlanilha === "CANCELADO") {
+        resultados.push({
+          linha: linha.linha,
+          id,
+          classificacao: "ignorado",
+          motivo: `Pedido novo, mas a planilha já traz como "${statusPlanilha === "ENTREGUE" ? "Entregue" : "Cancelado"}" — não foi criado`,
+        });
+        continue;
+      }
       if (gravar) {
         await prisma.pedido.create({
           data: { id, ...dados, statusEntrega: "AGUARDANDO_ACEITE", statusFinanceiro: "NA" },
@@ -171,30 +188,57 @@ export async function processarImportacao(
       continue;
     }
 
-    if (existente.statusEntrega !== "REENTREGA") {
+    // 1. Entregue é definitivo — nunca sobrescrever.
+    if (existente.statusEntrega === "ENTREGUE") {
       resultados.push({
         linha: linha.linha,
         id,
         classificacao: "ignorado",
-        motivo: `Pedido já existe com status "${LABEL_STATUS[existente.statusEntrega] ?? existente.statusEntrega}" (só reentrega é atualizada)`,
+        motivo: "Pedido já está Entregue — protegido contra alterações da importação",
       });
       continue;
     }
 
-    if (gravar) {
-      await prisma.pedido.update({
-        where: { id },
-        data: { ...dados, statusEntrega: "AGUARDANDO_ACEITE", statusFinanceiro: "NA", dataEntrega: null, observacaoProblema: null },
+    // 2. Cancelado já está encerrado.
+    if (existente.statusEntrega === "CANCELADO") {
+      resultados.push({
+        linha: linha.linha,
+        id,
+        classificacao: "ignorado",
+        motivo: "Pedido já está Cancelado — não é alterado",
       });
-      await prisma.historicoPedido.create({
-        data: {
-          pedidoId: id,
-          status: "AGUARDANDO_ACEITE",
-          usuario: `${nomeUsuario} (reatribuído de ${existente.transportador} para ${transportador})`,
-        },
-      });
+      continue;
     }
-    resultados.push({ linha: linha.linha, id, classificacao: "reatribuido" });
+
+    // 3. Reentrega (no nosso sistema, ou apontada agora pela planilha) → reatribui.
+    if (existente.statusEntrega === "REENTREGA" || statusPlanilha === "REENTREGA") {
+      if (gravar) await reatribuirPedido(id, dados, existente.transportador, nomeUsuario);
+      resultados.push({ linha: linha.linha, id, classificacao: "reatribuido" });
+      continue;
+    }
+
+    // 4. Planilha avisa de um cancelamento novo.
+    if (statusPlanilha === "CANCELADO") {
+      if (gravar) {
+        await prisma.pedido.update({
+          where: { id },
+          data: { statusEntrega: "CANCELADO", observacaoProblema: "Cancelado via importação de planilha" },
+        });
+        await prisma.historicoPedido.create({
+          data: { pedidoId: id, status: "CANCELADO", usuario: `${nomeUsuario} (via importação de planilha)` },
+        });
+      }
+      resultados.push({ linha: linha.linha, id, classificacao: "cancelado_planilha" });
+      continue;
+    }
+
+    // 5. Nada relevante mudou.
+    resultados.push({
+      linha: linha.linha,
+      id,
+      classificacao: "ignorado",
+      motivo: "Pedido já existe e nada relevante mudou",
+    });
   }
 
   return resultados;

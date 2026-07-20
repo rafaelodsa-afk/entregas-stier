@@ -6,6 +6,7 @@ import { obterCoordenadasDasCidades } from "@/lib/geocodificacao";
 import GraficoDonut from "@/components/GraficoDonut";
 import GraficoBarras from "@/components/GraficoBarras";
 import MapaEntregasClient from "@/components/MapaEntregasClient";
+import FiltroTransportador from "@/components/FiltroTransportador";
 
 export const dynamic = "force-dynamic";
 
@@ -31,12 +32,22 @@ const COR_STATUS: Record<string, string> = {
 
 const CORES_TRANSPORTADOR = ["#e3a73e", "#4e8fe3", "#3fbf8f", "#a78bfa", "#f0883e", "#e15c4a", "#8d95a1"];
 
-export default async function GraficosPage() {
+export default async function GraficosPage({
+  searchParams,
+}: {
+  searchParams: { transportador?: string };
+}) {
   const token = cookies().get(COOKIE_NAME)?.value;
   const sessao = token ? await verifySession(token) : null;
   if (!sessao || !podeVerTudo(sessao.papel)) redirect("/dashboard");
 
-  const pedidos = await prisma.pedido.findMany();
+  const todosPedidos = await prisma.pedido.findMany();
+  const transportadores = [...new Set(todosPedidos.map((p) => p.transportador))];
+
+  const filtroTransportador = searchParams.transportador ?? "";
+  const pedidos = filtroTransportador
+    ? todosPedidos.filter((p) => p.transportador === filtroTransportador)
+    : todosPedidos;
 
   const porStatus = Object.entries(LABEL_STATUS)
     .map(([status, label]) => ({
@@ -46,11 +57,12 @@ export default async function GraficosPage() {
     }))
     .filter((d) => d.valor > 0);
 
-  const transportadores = [...new Set(pedidos.map((p) => p.transportador))];
+  // O gráfico por transportador sempre compara todos, mesmo com filtro ativo
+  // (só destaca visualmente o selecionado).
   const porTransportador = transportadores
     .map((t, i) => ({
       label: t,
-      valor: pedidos.filter((p) => p.transportador === t).length,
+      valor: todosPedidos.filter((p) => p.transportador === t).length,
       cor: CORES_TRANSPORTADOR[i % CORES_TRANSPORTADOR.length],
     }))
     .sort((a, b) => b.valor - a.valor);
@@ -68,19 +80,23 @@ export default async function GraficosPage() {
       <h1 className="page-title">Gráficos e mapa</h1>
       <p className="page-sub">Panorama geral, distribuição por transportador, e onde estão as entregas pendentes.</p>
 
+      <div className="filtros-topo">
+        <FiltroTransportador transportadores={transportadores} />
+      </div>
+
       <div className="graficos-grid">
         <div className="form-card">
-          <h2>Panorama por status</h2>
+          <h2>Panorama por status{filtroTransportador ? ` — ${filtroTransportador}` : ""}</h2>
           <GraficoDonut dados={porStatus} />
         </div>
         <div className="form-card">
           <h2>Pedidos por transportador</h2>
-          <GraficoBarras dados={porTransportador} />
+          <GraficoBarras dados={porTransportador} destaque={filtroTransportador} />
         </div>
       </div>
 
       <div className="form-card">
-        <h2>Mapa de entregas pendentes</h2>
+        <h2>Mapa de entregas pendentes{filtroTransportador ? ` — ${filtroTransportador}` : ""}</h2>
         <p className="page-sub" style={{ marginBottom: 12 }}>
           Posição aproximada por cidade (não é o endereço exato) — o tamanho do círculo indica quantos
           pedidos pendentes há naquela cidade.

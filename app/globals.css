@@ -342,6 +342,18 @@ button {
   color: var(--teal);
   font-weight: 700;
 }
+.resumo-categorias {
+  list-style: none;
+  margin: 0 0 10px;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  font-size: 13px;
+}
+.resumo-categorias li {
+  color: var(--muted);
+}
 .erros-import {
   margin: 0;
   padding-left: 18px;
@@ -515,6 +527,60 @@ button {
 .barra-valor {
   text-align: right;
   font-weight: 700;
+}
+.barra-esmaecida {
+  opacity: 0.35;
+}
+.filtros-topo {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.filtro-transportador {
+  background: var(--bg-panel-2);
+  border: 1px solid var(--line);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-family: inherit;
+}
+.filtros-pedidos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.busca-pedidos {
+  background: var(--bg-panel-2);
+  border: 1px solid var(--line);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-family: inherit;
+  flex: 1;
+  min-width: 200px;
+}
+.acoes-linha {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.btn-excluir {
+  background: transparent;
+  border: 1px solid rgba(225, 92, 74, 0.4);
+  color: var(--red);
+  border-radius: 8px;
+  padding: 7px 12px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 700;
+}
+.btn-excluir:disabled {
+  opacity: 0.6;
+  cursor: default;
 }
 @media (max-width: 720px) {
   .graficos-grid {
