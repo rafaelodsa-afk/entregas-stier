@@ -5,6 +5,11 @@ import { hashPassword, podeGerenciarUsuariosPorPapel, senhaValida, MENSAGEM_REGR
 const PAPEIS_CRIAVEIS = ["ADMIN", "ANALISTA", "TRANSPORTADOR"];
 const TIPOS_CONTA = ["TRANSPORTADOR", "MOTORISTA"];
 
+// Motorista da frota própria é vinculado pelo nome da pessoa (pode trocar de
+// veículo) — o prefixo é obrigatório e sempre igual, pra nunca quebrar o
+// isolamento de pedidos por um erro de digitação vindo direto da API.
+const PREFIXO_FROTA_PROPRIA = "Frota Própria – ";
+
 function sessaoDoHeader(req: NextRequest) {
   const papel = (req.headers.get("x-user-papel") ?? "TRANSPORTADOR") as
     | "MASTER"
@@ -83,7 +88,11 @@ export async function POST(req: NextRequest) {
     if (!TIPOS_CONTA.includes(tipoConta)) {
       return NextResponse.json({ erro: "Selecione o tipo de conta do transportador" }, { status: 400 });
     }
-    if (!transportadorNome) {
+    if (tipoConta === "MOTORISTA" && !transportadorNome.startsWith(PREFIXO_FROTA_PROPRIA)) {
+      transportadorNome = `${PREFIXO_FROTA_PROPRIA}${transportadorNome}`.trim();
+    }
+    const nomeMotoristaVazio = tipoConta === "MOTORISTA" && transportadorNome.trim() === PREFIXO_FROTA_PROPRIA.trim();
+    if (!transportadorNome || nomeMotoristaVazio) {
       return NextResponse.json({ erro: "Informe o nome do transportador" }, { status: 400 });
     }
   }
@@ -106,7 +115,7 @@ export async function POST(req: NextRequest) {
       transportadorNome,
       podeCriarUsuarios: podeCriarUsuariosNovo,
       precisaTrocarSenha: true,
-      criadoPor: req.headers.get("x-user-nome") ?? "sistema",
+      criadoPor: decodeURIComponent(req.headers.get("x-user-nome") ?? "sistema"),
     },
     select: SELECT_SEGURO,
   });

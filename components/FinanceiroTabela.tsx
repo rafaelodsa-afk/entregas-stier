@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { upload } from "@vercel/blob/client";
 
 type PedidoAberto = {
   id: string;
@@ -32,7 +33,43 @@ export default function FinanceiroTabela({ pedidos }: { pedidos: PedidoAberto[] 
   const [lista, setLista] = useState(pedidos);
   const [idEmAcao, setIdEmAcao] = useState<string | null>(null);
   const [erro, setErro] = useState("");
+  const [arquivos, setArquivos] = useState<Record<string, File | null>>({});
   const router = useRouter();
+
+  async function anexarComprovante(id: string) {
+    const arquivo = arquivos[id];
+    if (!arquivo) return;
+    setErro("");
+    setIdEmAcao(id);
+    try {
+      const blob = await upload(`comprovantes-pagamento/pedido-${id}-${Date.now()}-${arquivo.name}`, arquivo, {
+        access: "public",
+        handleUploadUrl: "/api/upload",
+      });
+      const res = await fetch(`/api/pedidos/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          acao: "anexarComprovantePagamento",
+          comprovanteUrl: blob.url,
+          comprovanteTipo: arquivo.type.startsWith("image/") ? "foto" : "pdf",
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setErro(data.erro || "Não foi possível anexar o comprovante.");
+        return;
+      }
+      setLista((atual) => atual.map((p) => (p.id === id ? { ...p, comprovantePagamentoUrl: blob.url } : p)));
+      setArquivos((atual) => ({ ...atual, [id]: null }));
+      router.refresh();
+    } catch (err) {
+      console.error(err);
+      setErro("Erro de conexão.");
+    } finally {
+      setIdEmAcao(null);
+    }
+  }
 
   async function marcarComoRecebido(id: string) {
     setErro("");
@@ -102,7 +139,20 @@ export default function FinanceiroTabela({ pedidos }: { pedidos: PedidoAberto[] 
                       Ver comprovante
                     </a>
                   ) : (
-                    <span className="muted">Sem comprovante anexado</span>
+                    <div className="canhoto-upload">
+                      <label className="canhoto-input-label">
+                        {arquivos[p.id] ? arquivos[p.id]!.name : "Anexar comprovante"}
+                        <input
+                          type="file"
+                          accept="image/jpeg,image/png,image/webp,application/pdf"
+                          onChange={(e) => setArquivos((atual) => ({ ...atual, [p.id]: e.target.files?.[0] ?? null }))}
+                          hidden
+                        />
+                      </label>
+                      <button disabled={idEmAcao === p.id || !arquivos[p.id]} onClick={() => anexarComprovante(p.id)}>
+                        {idEmAcao === p.id ? "..." : "Enviar"}
+                      </button>
+                    </div>
                   )}
                 </td>
                 <td>

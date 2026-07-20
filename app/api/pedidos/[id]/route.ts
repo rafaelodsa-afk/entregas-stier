@@ -28,8 +28,8 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     | "ADMIN"
     | "ANALISTA"
     | "TRANSPORTADOR";
-  const transportadorSessao = req.headers.get("x-user-transportador") ?? "";
-  const nomeUsuario = req.headers.get("x-user-nome") ?? "sistema";
+  const transportadorSessao = decodeURIComponent(req.headers.get("x-user-transportador") ?? "");
+  const nomeUsuario = decodeURIComponent(req.headers.get("x-user-nome") ?? "sistema");
 
   const pedido = await prisma.pedido.findUnique({ where: { id: params.id } });
   if (!pedido) {

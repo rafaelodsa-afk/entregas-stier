@@ -62,6 +62,7 @@ export default async function FinanceiroPage({
           transportador: p.transportador,
           valorPedido: Number(p.valorPedido),
           acertoConfirmadoEm: p.acertoConfirmadoEm,
+          comprovantePagamentoUrl: p.comprovantePagamentoUrl,
         }))}
       />
     </div>

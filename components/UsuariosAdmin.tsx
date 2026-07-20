@@ -25,6 +25,11 @@ const LABEL_PAPEL: Record<string, string> = {
 
 const DICA_SENHA = "Mínimo 4 letras e 4 números";
 
+// Motorista da frota própria é vinculado pelo NOME DA PESSOA, não do
+// veículo (o motorista pode trocar de caminhão) — o prefixo é travado
+// pra sempre bater exatamente com o texto que o isolamento de dados espera.
+const PREFIXO_FROTA_PROPRIA = "Frota Própria – ";
+
 const VAZIO = {
   username: "",
   senha: "",
@@ -192,20 +197,46 @@ export default function UsuariosAdmin({ usuariosIniciais }: { usuariosIniciais: 
             <>
               <label>
                 Tipo de conta
-                <select value={form.tipoConta} onChange={(e) => setForm({ ...form, tipoConta: e.target.value })}>
+                <select
+                  value={form.tipoConta}
+                  onChange={(e) => {
+                    const tipoConta = e.target.value;
+                    setForm({
+                      ...form,
+                      tipoConta,
+                      transportadorNome: tipoConta === "MOTORISTA" ? PREFIXO_FROTA_PROPRIA : "",
+                    });
+                  }}
+                >
                   <option value="TRANSPORTADOR">Transportador terceirizado</option>
                   <option value="MOTORISTA">Motorista da frota própria</option>
                 </select>
               </label>
-              <label>
-                Nome do transportador
-                <input
-                  value={form.transportadorNome}
-                  onChange={(e) => setForm({ ...form, transportadorNome: e.target.value })}
-                  placeholder="Ex.: Rudimar, Frota Própria – Master"
-                  required
-                />
-              </label>
+              {form.tipoConta === "MOTORISTA" ? (
+                <label>
+                  Transportador/frota vinculado
+                  <div className="prefixo-travado">
+                    <span>{PREFIXO_FROTA_PROPRIA}</span>
+                    <input
+                      value={form.transportadorNome.startsWith(PREFIXO_FROTA_PROPRIA) ? form.transportadorNome.slice(PREFIXO_FROTA_PROPRIA.length) : form.transportadorNome}
+                      onChange={(e) => setForm({ ...form, transportadorNome: PREFIXO_FROTA_PROPRIA + e.target.value })}
+                      placeholder="Nome do motorista, ex.: Jonathan"
+                      required
+                    />
+                  </div>
+                  <span className="dica-campo">O prefixo é fixo — evita erro de digitação que quebraria o isolamento de pedidos entre motoristas.</span>
+                </label>
+              ) : (
+                <label>
+                  Nome do transportador
+                  <input
+                    value={form.transportadorNome}
+                    onChange={(e) => setForm({ ...form, transportadorNome: e.target.value })}
+                    placeholder="Ex.: Rudimar"
+                    required
+                  />
+                </label>
+              )}
             </>
           )}
           {form.papel === "ADMIN" && (

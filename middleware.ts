@@ -36,12 +36,15 @@ export async function middleware(req: NextRequest) {
 
   // Repassa os dados da sessão já verificada para as rotas via headers,
   // para as API routes não precisarem reabrir/revalidar o cookie sozinhas.
+  // Nome/transportador passam por encodeURIComponent porque headers HTTP só
+  // aceitam ByteString (Latin-1) — nomes com "–" (traço médio) ou outros
+  // caracteres fora desse intervalo quebrariam o Headers.set() cru.
   const headers = new Headers(req.headers);
   headers.set("x-user-id", sessao.userId);
   headers.set("x-user-username", sessao.username);
   headers.set("x-user-papel", sessao.papel);
-  headers.set("x-user-nome", sessao.nome);
-  headers.set("x-user-transportador", sessao.transportadorNome ?? "");
+  headers.set("x-user-nome", encodeURIComponent(sessao.nome));
+  headers.set("x-user-transportador", encodeURIComponent(sessao.transportadorNome ?? ""));
   headers.set("x-user-pode-criar-usuarios", sessao.podeCriarUsuarios ? "1" : "0");
 
   return NextResponse.next({ request: { headers } });

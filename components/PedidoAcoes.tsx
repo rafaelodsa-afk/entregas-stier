@@ -192,6 +192,7 @@ export default function PedidoAcoes({ pedido, isAdmin = false }: { pedido: Pedid
         {linkCanhoto}
         {linkComprovante}
         {blocoCanhoto}
+        {blocoComprovante}
         {erro && <p className="erro" style={{ marginTop: 6 }}>{erro}</p>}
       </div>
     );

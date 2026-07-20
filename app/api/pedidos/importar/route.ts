@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ erro: "Envie no máximo 5000 linhas por vez" }, { status: 400 });
   }
 
-  const nomeUsuario = req.headers.get("x-user-nome") ?? "sistema";
+  const nomeUsuario = decodeURIComponent(req.headers.get("x-user-nome") ?? "sistema");
   const resultados = await processarImportacao(linhas, nomeUsuario, Boolean(body.confirmar));
 
   const contar = (classificacao: string) => resultados.filter((r) => r.classificacao === classificacao).length;

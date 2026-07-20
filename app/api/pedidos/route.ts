@@ -13,7 +13,7 @@ function papelDaSessao(req: NextRequest) {
 
 export async function GET(req: NextRequest) {
   const papel = papelDaSessao(req);
-  const transportador = (req.headers.get("x-user-transportador") ?? "").trim();
+  const transportador = decodeURIComponent(req.headers.get("x-user-transportador") ?? "").trim();
 
   // Comparação sem diferenciar maiúsculas/minúsculas: um espaço a mais ou
   // uma letra maiúscula diferente no cadastro não pode esconder pedidos do
@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ erro: "Requisição inválida" }, { status: 400 });
   }
 
-  const nomeUsuario = req.headers.get("x-user-nome") ?? "sistema";
+  const nomeUsuario = decodeURIComponent(req.headers.get("x-user-nome") ?? "sistema");
   const resultado = await criarOuReatribuirPedido(body, nomeUsuario);
   if (!resultado.ok) {
     return NextResponse.json({ erro: resultado.erro }, { status: resultado.erro.includes("já existe") ? 409 : 400 });

@@ -4,6 +4,7 @@ import Image from "next/image";
 import { verifySession, COOKIE_NAME, podeGerenciarUsuariosPorPapel, podeVerTudo } from "@/lib/auth";
 import LogoutButton from "@/components/LogoutButton";
 import NavTabs from "@/components/NavTabs";
+import AlterarMinhaSenha from "@/components/AlterarMinhaSenha";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const token = cookies().get(COOKIE_NAME)?.value;
@@ -29,6 +30,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         </span>
         <div className="user-info">
           <span>{sessao.nome}</span>
+          <AlterarMinhaSenha />
           <LogoutButton />
         </div>
       </header>
