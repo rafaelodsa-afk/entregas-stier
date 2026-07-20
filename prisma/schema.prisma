@@ -106,3 +106,28 @@ model CidadeCoordenada {
   longitude      Float
   atualizadoEm   DateTime @default(now())
 }
+
+// Registro de que um mês (formato "AAAA-MM") já foi exportado — usado pra
+// só liberar o botão de excluir aquele mês depois de confirmado que o
+// arquivo de backup foi gerado. Reexportar o mesmo mês atualiza este
+// registro (não cria duplicata).
+model ExportacaoMensal {
+  id            String   @id @default(cuid())
+  mes           String   @unique
+  exportadoPor  String
+  exportadoEm   DateTime @default(now())
+  totalPedidos  Int
+  totalArquivos Int
+}
+
+// Registro PERMANENTE (nunca apagado) de que um mês foi arquivado e
+// excluído — prova de rastreabilidade mesmo depois que os pedidos originais
+// já não existem mais no banco.
+model ArquivamentoLog {
+  id            String   @id @default(cuid())
+  mes           String
+  totalPedidos  Int
+  totalArquivos Int
+  excluidoPor   String
+  excluidoEm    DateTime @default(now())
+}
