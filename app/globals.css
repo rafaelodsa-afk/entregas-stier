@@ -391,6 +391,12 @@ button {
   font-weight: 700;
   align-self: center;
 }
+.acoes {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
 
 .btn-importar {
   background: var(--amber);
