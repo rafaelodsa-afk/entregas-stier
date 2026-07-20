@@ -13,9 +13,14 @@ function papelDaSessao(req: NextRequest) {
 
 export async function GET(req: NextRequest) {
   const papel = papelDaSessao(req);
-  const transportador = req.headers.get("x-user-transportador") ?? "";
+  const transportador = (req.headers.get("x-user-transportador") ?? "").trim();
 
-  const where = podeVerTudo(papel) ? {} : { transportador: transportador || "___nenhum___" };
+  // Comparação sem diferenciar maiúsculas/minúsculas: um espaço a mais ou
+  // uma letra maiúscula diferente no cadastro não pode esconder pedidos do
+  // próprio transportador nem (na direção oposta) nunca mostrar de outro.
+  const where = podeVerTudo(papel)
+    ? {}
+    : { transportador: { equals: transportador || "___nenhum___", mode: "insensitive" as const } };
   const pedidos = await prisma.pedido.findMany({
     where,
     orderBy: { dataCriacao: "desc" },

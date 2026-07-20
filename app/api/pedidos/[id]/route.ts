@@ -1,6 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { podeVerTudo } from "@/lib/auth";
+import { ehOperacaoDeVenda } from "@/lib/pedidos";
+
+// Compara nomes de transportador ignorando maiúsculas/minúsculas e espaços
+// extras — pra um espaço a mais no cadastro não travar o próprio dono do
+// pedido, nem (na direção oposta) nunca deixar passar alguém de fora.
+function mesmoTransportador(a: string, b: string) {
+  return a.trim().toLowerCase() === b.trim().toLowerCase();
+}
 
 const PAGAMENTOS_A_VISTA = ["DINHEIRO", "PIX", "A VISTA", "AVISTA"];
 const STATUS_VALIDOS = [
@@ -28,7 +36,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   }
 
   // Transportador só mexe nos próprios pedidos.
-  if (papel === "TRANSPORTADOR" && pedido.transportador !== transportadorSessao) {
+  if (papel === "TRANSPORTADOR" && !mesmoTransportador(pedido.transportador, transportadorSessao)) {
     return NextResponse.json({ erro: "Sem permissão sobre este pedido" }, { status: 403 });
   }
 
@@ -55,9 +63,12 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     case "finalizarEntrega": {
       data.statusEntrega = "ENTREGUE";
       data.dataEntrega = new Date();
-      data.statusFinanceiro = PAGAMENTOS_A_VISTA.includes((pedido.formaPagamento || "").toUpperCase())
-        ? "AGUARDANDO_ACERTO"
-        : "NA";
+      // Só vira pendência financeira se for Venda (padrão quando a
+      // planilha não informa operação) E o pagamento for à vista.
+      data.statusFinanceiro =
+        ehOperacaoDeVenda(pedido.operacao) && PAGAMENTOS_A_VISTA.includes((pedido.formaPagamento || "").toUpperCase())
+          ? "AGUARDANDO_ACERTO"
+          : "NA";
       if (body.canhotoUrl) {
         data.canhotoUrl = body.canhotoUrl;
         data.canhotoTipo = body.canhotoTipo || "foto";

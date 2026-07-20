@@ -62,6 +62,7 @@ model Pedido {
   rua                String            @default("")
   numero             String            @default("")
   transportador      String
+  operacao           String            @default("VENDA") // Venda, Bonificação, Transferência, Remessa, etc. — vem da coluna "Operação" da planilha
   formaPagamento     String            @default("BOLETO")
   valorPedido        Decimal           @default(0) @db.Decimal(12, 2)
   prazo              String            @default("")

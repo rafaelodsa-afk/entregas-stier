@@ -12,6 +12,7 @@ type LinhaImportada = {
   rua?: unknown;
   numero?: unknown;
   transportador?: unknown;
+  operacao?: unknown;
   formaPagamento?: unknown;
   valorPedido?: unknown;
   prazo?: unknown;
@@ -53,6 +54,8 @@ const MAPA_COLUNAS: Record<string, string> = {
   numero: "numero",
   nrendereco: "numero",
   transportador: "transportador",
+  operacao: "operacao",
+  tipodeoperacao: "operacao",
   formadepagamento: "formaPagamento",
   formapagamento: "formaPagamento",
   pagamento: "formaPagamento",
@@ -185,7 +188,7 @@ export default function ImportarPlanilha() {
       <h2>Importar pedidos por planilha</h2>
       <p className="page-sub" style={{ marginBottom: 12 }}>
         Envie um arquivo .xlsx ou .csv com as colunas: Nº Pedido, Cliente, Cidade, Bairro, Rua, Número,
-        Transportador, Forma de Pagamento, Valor, Prazo (e, se quiser, Status de entrega).{" "}
+        Transportador, Operação, Forma de Pagamento, Valor, Prazo (e, se quiser, Status de entrega).{" "}
         <a className="link-canhoto" href="/modelo-pedidos.csv" download>
           Baixar planilha modelo
         </a>

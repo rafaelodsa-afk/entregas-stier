@@ -13,7 +13,7 @@ export default async function OperadorDashboard() {
   if (sessao.papel !== "TRANSPORTADOR") redirect("/dashboard/admin");
 
   const pedidos = await prisma.pedido.findMany({
-    where: { transportador: sessao.transportadorNome ?? "___nenhum___" },
+    where: { transportador: { equals: (sessao.transportadorNome ?? "___nenhum___").trim(), mode: "insensitive" } },
     orderBy: { dataCriacao: "desc" },
   });
   const pendentes = pedidos.filter((p) => !["ENTREGUE", "CANCELADO", "DEVOLVIDO", "REENTREGA"].includes(p.statusEntrega));

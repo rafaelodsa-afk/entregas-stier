@@ -8,10 +8,27 @@ export type LinhaPedido = {
   rua?: unknown;
   numero?: unknown;
   transportador?: unknown;
+  operacao?: unknown;
   formaPagamento?: unknown;
   valorPedido?: unknown;
   prazo?: unknown;
 };
+
+// Sem informação de operação (planilha antiga, coluna ausente, cadastro
+// manual sem esse campo) => trata como Venda, pra não quebrar o
+// comportamento que já existia antes desse campo existir.
+function normalizarOperacao(valorCru: unknown): string {
+  const texto = String(valorCru ?? "").trim().toUpperCase();
+  return texto || "VENDA";
+}
+
+// Só operações de Venda geram pendência financeira (Aguardando acerto) —
+// bonificação, transferência, remessa, etc. não entram nesse controle,
+// mesmo que a forma de pagamento seja dinheiro ou PIX.
+export function ehOperacaoDeVenda(operacao: unknown): boolean {
+  const texto = normalizarOperacao(operacao);
+  return texto === "VENDA" || texto === "VENDAS";
+}
 
 // Usado tanto pelo cadastro manual (um pedido por vez) quanto pela
 // importação de planilha (várias linhas), para manter a mesma regra de
@@ -31,6 +48,7 @@ export async function criarOuReatribuirPedido(linha: LinhaPedido, nomeUsuario: s
     rua: String(linha.rua ?? "").trim(),
     numero: String(linha.numero ?? "").trim(),
     transportador,
+    operacao: normalizarOperacao(linha.operacao),
     formaPagamento: String(linha.formaPagamento ?? "BOLETO").trim().toUpperCase(),
     valorPedido: Number(linha.valorPedido) || 0,
     prazo: String(linha.prazo ?? "").trim(),
@@ -120,6 +138,7 @@ function montarDados(linha: LinhaImportada, cliente: string, transportador: stri
     rua: String(linha.rua ?? "").trim(),
     numero: String(linha.numero ?? "").trim(),
     transportador,
+    operacao: normalizarOperacao(linha.operacao),
     formaPagamento: String(linha.formaPagamento ?? "BOLETO").trim().toUpperCase(),
     valorPedido: Number(linha.valorPedido) || 0,
     prazo: String(linha.prazo ?? "").trim(),
