@@ -1,2 +1,2 @@
-﻿Nº Pedido,Cliente,Cidade,Bairro,Rua,Número,Transportador,Operação,Forma de Pagamento,Valor,Prazo,Status de entrega
-100999,Comércio Exemplo Ltda,Porto Alegre,Centro,Rua Exemplo,123,Rudimar,Venda,PIX,1500.00,2 dias,
+﻿Nº Pedido,Cliente,Cidade,Bairro,Rua,Número,Transportador,Operação,Forma de Pagamento,Valor,Prazo,Status de entrega,Prev. Entrega
+100999,Comércio Exemplo Ltda,Porto Alegre,Centro,Rua Exemplo,123,Rudimar,Venda,PIX,1500.00,2 dias,,15/08/2026

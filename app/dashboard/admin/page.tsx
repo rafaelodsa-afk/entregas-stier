@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { verifySession, COOKIE_NAME, podeVerTudo } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import ImportarPlanilha from "@/components/ImportarPlanilha";
+import CriarPedido from "@/components/CriarPedido";
 import FiltroTransportador from "@/components/FiltroTransportador";
 import TabelaPedidos from "@/components/TabelaPedidos";
 
@@ -50,6 +51,7 @@ export default async function AdminDashboard({
       </div>
 
       <ImportarPlanilha />
+      <CriarPedido />
 
       <TabelaPedidos
         pedidos={pedidos.map((p) => ({

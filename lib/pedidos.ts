@@ -12,7 +12,45 @@ export type LinhaPedido = {
   formaPagamento?: unknown;
   valorPedido?: unknown;
   prazo?: unknown;
+  dataPrevistaEntrega?: unknown;
 };
+
+// Aceita data já como objeto Date (planilha lida com cellDates), número de
+// série do Excel (dias desde 1899-12-30), ou texto solto em dd/mm/aaaa ou
+// aaaa-mm-dd. Qualquer coisa que não dê pra interpretar vira null, sem erro.
+//
+// Sempre grava como meia-noite UTC — é uma DATA pura (sem hora), não um
+// instante específico. Guardar assim (e sempre exibir com timeZone "UTC",
+// ver lib/formatarData.ts) evita que o dia mude sozinho dependendo de o
+// servidor rodar no fuso de Brasília (dev local) ou UTC (Vercel).
+export function parseDataPrevista(valorCru: unknown): Date | null {
+  if (valorCru === null || valorCru === undefined || valorCru === "") return null;
+  if (valorCru instanceof Date) {
+    if (isNaN(valorCru.getTime())) return null;
+    return new Date(Date.UTC(valorCru.getFullYear(), valorCru.getMonth(), valorCru.getDate()));
+  }
+  if (typeof valorCru === "number") {
+    const data = new Date(Math.round((valorCru - 25569) * 86400 * 1000));
+    return isNaN(data.getTime()) ? null : data;
+  }
+  const texto = String(valorCru).trim();
+  if (!texto) return null;
+  const bra = texto.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+  if (bra) {
+    const [, d, m, y] = bra;
+    const ano = y.length === 2 ? Number(y) + 2000 : Number(y);
+    const data = new Date(Date.UTC(ano, Number(m) - 1, Number(d)));
+    return isNaN(data.getTime()) ? null : data;
+  }
+  const iso = texto.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (iso) {
+    const [, y, m, d] = iso;
+    const data = new Date(Date.UTC(Number(y), Number(m) - 1, Number(d)));
+    return isNaN(data.getTime()) ? null : data;
+  }
+  const generico = new Date(texto);
+  return isNaN(generico.getTime()) ? null : generico;
+}
 
 // Sem informação de operação (planilha antiga, coluna ausente, cadastro
 // manual sem esse campo) => trata como Venda, pra não quebrar o
@@ -65,6 +103,7 @@ export async function criarOuReatribuirPedido(linha: LinhaPedido, nomeUsuario: s
     formaPagamento: String(linha.formaPagamento ?? "BOLETO").trim().toUpperCase(),
     valorPedido: Number(linha.valorPedido) || 0,
     prazo: String(linha.prazo ?? "").trim(),
+    dataPrevistaEntrega: parseDataPrevista(linha.dataPrevistaEntrega),
   };
 
   const existente = await prisma.pedido.findUnique({ where: { id } });
@@ -153,6 +192,7 @@ function montarDados(linha: LinhaImportada, cliente: string, transportador: stri
     formaPagamento: String(linha.formaPagamento ?? "BOLETO").trim().toUpperCase(),
     valorPedido: Number(linha.valorPedido) || 0,
     prazo: String(linha.prazo ?? "").trim(),
+    dataPrevistaEntrega: parseDataPrevista(linha.dataPrevistaEntrega),
   };
 }
 

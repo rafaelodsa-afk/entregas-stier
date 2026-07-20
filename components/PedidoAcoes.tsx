@@ -3,6 +3,10 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { upload } from "@vercel/blob/client";
+import { comprimirImagem } from "@/lib/comprimirImagem";
+import { LABEL_STATUS, CLASSE_BADGE } from "@/lib/statusLabels";
+
+export { LABEL_STATUS };
 
 type Pedido = {
   id: string;
@@ -11,21 +15,6 @@ type Pedido = {
   statusPlanilha?: string | null;
   canhotoUrl?: string | null;
   comprovantePagamentoUrl?: string | null;
-};
-
-export const LABEL_STATUS: Record<string, string> = {
-  AGUARDANDO_ACEITE: "Aguardando aceite",
-  AGUARDANDO_CARREGAMENTO: "Aguardando carregamento",
-  EM_ROTA: "Em rota de entrega",
-  AGUARDANDO_CANHOTO: "Entregue (planilha) — aguardando canhoto",
-  ENTREGUE: "Entregue",
-  REENTREGA: "Reentrega",
-  CANCELADO: "Cancelado",
-  DEVOLVIDO: "Devolvido",
-};
-
-const CLASSE_BADGE: Record<string, string> = {
-  AGUARDANDO_CANHOTO: "badge-aguardando-canhoto",
 };
 
 // Só não dá pra anexar canhoto quando o pedido já chegou num desses estados finais.
@@ -80,14 +69,15 @@ export default function PedidoAcoes({ pedido, isAdmin = false }: { pedido: Pedid
     setCarregando(true);
     setErro("");
     try {
-      const blob = await upload(`canhotos/pedido-${pedido.id}-${Date.now()}-${canhoto.name}`, canhoto, {
+      const arquivo = await comprimirImagem(canhoto);
+      const blob = await upload(`canhotos/pedido-${pedido.id}-${Date.now()}-${arquivo.name}`, arquivo, {
         access: "public",
         handleUploadUrl: "/api/upload",
       });
       await enviarAcao(pedido.id, {
         acao: "finalizarEntrega",
         canhotoUrl: blob.url,
-        canhotoTipo: canhoto.type.startsWith("image/") ? "foto" : "pdf",
+        canhotoTipo: arquivo.type.startsWith("image/") ? "foto" : "pdf",
       });
       setCanhoto(null);
       router.refresh();
@@ -107,14 +97,15 @@ export default function PedidoAcoes({ pedido, isAdmin = false }: { pedido: Pedid
     setCarregando(true);
     setErro("");
     try {
-      const blob = await upload(`comprovantes-pagamento/pedido-${pedido.id}-${Date.now()}-${comprovante.name}`, comprovante, {
+      const arquivo = await comprimirImagem(comprovante);
+      const blob = await upload(`comprovantes-pagamento/pedido-${pedido.id}-${Date.now()}-${arquivo.name}`, arquivo, {
         access: "public",
         handleUploadUrl: "/api/upload",
       });
       await enviarAcao(pedido.id, {
         acao: "anexarComprovantePagamento",
         comprovanteUrl: blob.url,
-        comprovanteTipo: comprovante.type.startsWith("image/") ? "foto" : "pdf",
+        comprovanteTipo: arquivo.type.startsWith("image/") ? "foto" : "pdf",
       });
       setComprovante(null);
       router.refresh();

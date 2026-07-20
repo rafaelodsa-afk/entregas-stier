@@ -17,6 +17,7 @@ type LinhaImportada = {
   valorPedido?: unknown;
   prazo?: unknown;
   statusEntregaPlanilha?: unknown;
+  dataPrevistaEntrega?: unknown;
 };
 
 type Resumo = {
@@ -70,6 +71,14 @@ const MAPA_COLUNAS: Record<string, string> = {
   prazo: "prazo",
   statusdeentrega: "statusEntregaPlanilha",
   status: "statusEntregaPlanilha",
+  preventrega: "dataPrevistaEntrega",
+  previsaodeentrega: "dataPrevistaEntrega",
+  previsaoentrega: "dataPrevistaEntrega",
+  dataprevista: "dataPrevistaEntrega",
+  dataprevistadeentrega: "dataPrevistaEntrega",
+  dataprevistaentrega: "dataPrevistaEntrega",
+  datadeentregaprevista: "dataPrevistaEntrega",
+  entregaprevista: "dataPrevistaEntrega",
 };
 
 async function lerArquivoNoNavegador(arquivo: File): Promise<Record<string, any>[]> {
@@ -193,7 +202,8 @@ export default function ImportarPlanilha() {
       <h2>Importar pedidos por planilha</h2>
       <p className="page-sub" style={{ marginBottom: 12 }}>
         Envie um arquivo .xlsx ou .csv com as colunas: Nº Pedido, Cliente, Cidade, Bairro, Rua, Número,
-        Transportador, Operação, Forma de Pagamento, Valor, Prazo (e, se quiser, Status de entrega).{" "}
+        Transportador, Operação, Forma de Pagamento, Valor, Prazo (e, se quiser, Status de entrega e Prev.
+        Entrega).{" "}
         <a className="link-canhoto" href="/modelo-pedidos.csv" download>
           Baixar planilha modelo
         </a>

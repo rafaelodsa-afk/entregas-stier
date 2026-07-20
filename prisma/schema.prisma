@@ -68,6 +68,7 @@ model Pedido {
   formaPagamento     String            @default("BOLETO")
   valorPedido        Decimal           @default(0) @db.Decimal(12, 2)
   prazo              String            @default("")
+  dataPrevistaEntrega DateTime?
   statusEntrega      StatusEntrega     @default(AGUARDANDO_ACEITE)
   statusPlanilha     String? // último status reportado pela planilha, só informativo — nunca decide o statusEntrega sozinho
   statusFinanceiro   StatusFinanceiro  @default(NA)

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { upload } from "@vercel/blob/client";
+import { comprimirImagem } from "@/lib/comprimirImagem";
 
 type PedidoAberto = {
   id: string;
@@ -42,7 +43,8 @@ export default function FinanceiroTabela({ pedidos }: { pedidos: PedidoAberto[] 
     setErro("");
     setIdEmAcao(id);
     try {
-      const blob = await upload(`comprovantes-pagamento/pedido-${id}-${Date.now()}-${arquivo.name}`, arquivo, {
+      const arquivoComprimido = await comprimirImagem(arquivo);
+      const blob = await upload(`comprovantes-pagamento/pedido-${id}-${Date.now()}-${arquivoComprimido.name}`, arquivoComprimido, {
         access: "public",
         handleUploadUrl: "/api/upload",
       });
@@ -52,7 +54,7 @@ export default function FinanceiroTabela({ pedidos }: { pedidos: PedidoAberto[] 
         body: JSON.stringify({
           acao: "anexarComprovantePagamento",
           comprovanteUrl: blob.url,
-          comprovanteTipo: arquivo.type.startsWith("image/") ? "foto" : "pdf",
+          comprovanteTipo: arquivoComprimido.type.startsWith("image/") ? "foto" : "pdf",
         }),
       });
       if (!res.ok) {

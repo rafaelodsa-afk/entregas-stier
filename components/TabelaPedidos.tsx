@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import PedidoAcoes, { BadgeStatus, LABEL_STATUS } from "@/components/PedidoAcoes";
 
 type Pedido = {
@@ -92,7 +93,7 @@ export default function TabelaPedidos({ pedidos }: { pedidos: Pedido[] }) {
         <tbody>
           {filtrados.map((p) => (
             <tr key={p.id}>
-              <td>#{p.id}</td>
+              <td><Link className="link-canhoto" href={`/dashboard/admin/pedidos/${p.id}`}>#{p.id}</Link></td>
               <td>{p.cliente}</td>
               <td>{p.transportador}</td>
               <td><BadgeStatus status={p.statusEntrega} statusPlanilha={p.statusPlanilha} /></td>
