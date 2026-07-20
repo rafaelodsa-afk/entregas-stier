@@ -195,6 +195,23 @@ button {
   cursor: pointer;
   font-size: 12.5px;
 }
+.btn-atualizar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 7px;
+}
+.icone-girando {
+  animation: girar 0.5s linear;
+}
+@keyframes girar {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
 .nav-tabs {
   display: flex;
   gap: 4px;
