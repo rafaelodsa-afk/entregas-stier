@@ -2,27 +2,18 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import PedidoAcoes, { BadgeStatus } from "@/components/PedidoAcoes";
+import PedidoAcoes, { BadgeStatus, LABEL_STATUS } from "@/components/PedidoAcoes";
 
 type Pedido = {
   id: string;
   cliente: string;
   transportador: string;
   statusEntrega: string;
+  statusPlanilha: string | null;
   statusFinanceiro: string;
   valorPedido: number;
   canhotoUrl: string | null;
   comprovantePagamentoUrl: string | null;
-};
-
-const LABEL_STATUS: Record<string, string> = {
-  AGUARDANDO_ACEITE: "Aguardando aceite",
-  AGUARDANDO_CARREGAMENTO: "Aguardando carregamento",
-  EM_ROTA: "Em rota de entrega",
-  ENTREGUE: "Entregue",
-  REENTREGA: "Reentrega",
-  CANCELADO: "Cancelado",
-  DEVOLVIDO: "Devolvido",
 };
 
 export default function TabelaPedidos({ pedidos }: { pedidos: Pedido[] }) {
@@ -104,7 +95,7 @@ export default function TabelaPedidos({ pedidos }: { pedidos: Pedido[] }) {
               <td>#{p.id}</td>
               <td>{p.cliente}</td>
               <td>{p.transportador}</td>
-              <td><BadgeStatus status={p.statusEntrega} /></td>
+              <td><BadgeStatus status={p.statusEntrega} statusPlanilha={p.statusPlanilha} /></td>
               <td>{p.statusFinanceiro === "AGUARDANDO_ACERTO" ? <span className="badge badge-acerto">Aguardando acerto</span> : "—"}</td>
               <td>{p.valorPedido.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</td>
               <td>

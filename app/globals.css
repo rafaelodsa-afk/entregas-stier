@@ -11,6 +11,7 @@
   --blue: #4e8fe3;
   --violet: #a78bfa;
   --orange: #f0883e;
+  --pink: #e35c9e;
 }
 
 * {
@@ -275,6 +276,16 @@ button {
 .badge-acerto {
   background: rgba(167, 139, 250, 0.16);
   color: var(--violet);
+}
+.badge-aguardando-canhoto {
+  background: rgba(227, 92, 158, 0.16);
+  color: var(--pink);
+  white-space: normal;
+}
+.status-planilha-info {
+  color: var(--muted);
+  font-size: 10.5px;
+  margin-top: 3px;
 }
 
 /* cards operador */

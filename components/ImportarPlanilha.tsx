@@ -21,8 +21,13 @@ type LinhaImportada = {
 
 type Resumo = {
   novos: number;
+  novosAguardandoCanhoto: number;
+  novosCancelados: number;
   reatribuidos: number;
   canceladosPlanilha: number;
+  aguardandoCanhoto: number;
+  protegidos: { linha: number; id: string | null; motivo: string }[];
+  semMudancaOperacional: number;
   ignorados: { linha: number; id: string | null; motivo: string }[];
 };
 
@@ -221,14 +226,25 @@ export default function ImportarPlanilha() {
           <p>Resumo antes de confirmar:</p>
           <ul className="resumo-categorias">
             <li><strong>{resumo.novos}</strong> novo(s)</li>
+            <li><strong>{resumo.novosAguardandoCanhoto}</strong> novo(s) já como "aguardando canhoto"</li>
+            <li><strong>{resumo.novosCancelados}</strong> novo(s) já cancelado(s)</li>
             <li><strong>{resumo.reatribuidos}</strong> reatribuído(s) (reentrega)</li>
             <li><strong>{resumo.canceladosPlanilha}</strong> cancelado(s) pela planilha</li>
-            <li><strong>{resumo.ignorados.length}</strong> ignorado(s) sem mudança</li>
+            <li><strong>{resumo.aguardandoCanhoto}</strong> mudou(aram) pra "aguardando canhoto"</li>
+            <li><strong>{resumo.protegidos.length}</strong> protegido(s) sem alteração</li>
+            <li><strong>{resumo.semMudancaOperacional}</strong> sem mudança operacional</li>
+            <li><strong>{resumo.ignorados.length}</strong> ignorado(s) (dados incompletos)</li>
           </ul>
-          {resumo.ignorados.length > 0 && (
+          {(resumo.ignorados.length > 0 || resumo.protegidos.length > 0) && (
             <ul className="erros-import">
+              {resumo.protegidos.map((r, i) => (
+                <li key={`p${i}`}>
+                  Linha {r.linha}
+                  {r.id ? ` (#${r.id})` : ""}: {r.motivo}
+                </li>
+              ))}
               {resumo.ignorados.map((r, i) => (
-                <li key={i}>
+                <li key={`i${i}`}>
                   Linha {r.linha}
                   {r.id ? ` (#${r.id})` : ""}: {r.motivo}
                 </li>
@@ -239,7 +255,14 @@ export default function ImportarPlanilha() {
             <button className="btn-importar" onClick={confirmar} disabled={carregando}>
               {carregando
                 ? "Importando..."
-                : `Confirmar importação (${resumo.novos + resumo.reatribuidos + resumo.canceladosPlanilha} pedido(s))`}
+                : `Confirmar importação (${
+                    resumo.novos +
+                    resumo.novosAguardandoCanhoto +
+                    resumo.novosCancelados +
+                    resumo.reatribuidos +
+                    resumo.canceladosPlanilha +
+                    resumo.aguardandoCanhoto
+                  } pedido(s))`}
             </button>
             <button className="btn-ghost" onClick={limpar} disabled={carregando}>
               Cancelar
@@ -253,9 +276,14 @@ export default function ImportarPlanilha() {
           <p>Importação concluída:</p>
           <ul className="resumo-categorias">
             <li><strong>{concluido.novos}</strong> criado(s)</li>
+            <li><strong>{concluido.novosAguardandoCanhoto}</strong> criado(s) já como "aguardando canhoto"</li>
+            <li><strong>{concluido.novosCancelados}</strong> criado(s) já cancelado(s)</li>
             <li><strong>{concluido.reatribuidos}</strong> reatribuído(s)</li>
             <li><strong>{concluido.canceladosPlanilha}</strong> cancelado(s) pela planilha</li>
-            <li><strong>{concluido.ignorados.length}</strong> ignorado(s) sem mudança</li>
+            <li><strong>{concluido.aguardandoCanhoto}</strong> mudou(aram) pra "aguardando canhoto"</li>
+            <li><strong>{concluido.protegidos.length}</strong> protegido(s) sem alteração</li>
+            <li><strong>{concluido.semMudancaOperacional}</strong> sem mudança operacional</li>
+            <li><strong>{concluido.ignorados.length}</strong> ignorado(s)</li>
           </ul>
         </div>
       )}

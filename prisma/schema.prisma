@@ -26,6 +26,7 @@ enum StatusEntrega {
   AGUARDANDO_ACEITE
   AGUARDANDO_CARREGAMENTO
   EM_ROTA
+  AGUARDANDO_CANHOTO // a planilha da Stier já reporta como entregue, mas ninguém anexou o canhoto pelo app ainda
   ENTREGUE
   REENTREGA
   CANCELADO
@@ -68,6 +69,7 @@ model Pedido {
   valorPedido        Decimal           @default(0) @db.Decimal(12, 2)
   prazo              String            @default("")
   statusEntrega      StatusEntrega     @default(AGUARDANDO_ACEITE)
+  statusPlanilha     String? // último status reportado pela planilha, só informativo — nunca decide o statusEntrega sozinho
   statusFinanceiro   StatusFinanceiro  @default(NA)
   observacaoProblema String?
   canhotoUrl         String?

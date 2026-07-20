@@ -34,12 +34,23 @@ export async function POST(req: NextRequest) {
   const nomeUsuario = req.headers.get("x-user-nome") ?? "sistema";
   const resultados = await processarImportacao(linhas, nomeUsuario, Boolean(body.confirmar));
 
-  const novos = resultados.filter((r) => r.classificacao === "novo").length;
-  const reatribuidos = resultados.filter((r) => r.classificacao === "reatribuido").length;
-  const canceladosPlanilha = resultados.filter((r) => r.classificacao === "cancelado_planilha").length;
+  const contar = (classificacao: string) => resultados.filter((r) => r.classificacao === classificacao).length;
   const ignorados = resultados
     .filter((r) => r.classificacao === "ignorado")
     .map((r) => ({ linha: r.linha, id: r.id, motivo: r.motivo }));
+  const protegidos = resultados
+    .filter((r) => r.classificacao === "protegido")
+    .map((r) => ({ linha: r.linha, id: r.id, motivo: (r as any).motivo as string }));
 
-  return NextResponse.json({ novos, reatribuidos, canceladosPlanilha, ignorados });
+  return NextResponse.json({
+    novos: contar("novo"),
+    novosAguardandoCanhoto: contar("novo_aguardando_canhoto"),
+    novosCancelados: contar("novo_cancelado"),
+    reatribuidos: contar("reatribuido"),
+    canceladosPlanilha: contar("cancelado_planilha"),
+    aguardandoCanhoto: contar("aguardando_canhoto"),
+    protegidos,
+    semMudancaOperacional: contar("sem_mudanca_operacional"),
+    ignorados,
+  });
 }

@@ -29,7 +29,7 @@ export default async function OperadorDashboard() {
           <div key={p.id} className="pedido-card">
             <div className="pedido-card-top">
               <span>
-                <span className="pedido-numero">#{p.id}</span> <BadgeStatus status={p.statusEntrega} />
+                <span className="pedido-numero">#{p.id}</span> <BadgeStatus status={p.statusEntrega} statusPlanilha={p.statusPlanilha} />
                 {p.statusFinanceiro === "AGUARDANDO_ACERTO" && <span className="badge badge-acerto" style={{ marginLeft: 6 }}>Aguardando acerto</span>}
               </span>
               <span>{Number(p.valorPedido).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</span>

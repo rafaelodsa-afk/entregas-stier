@@ -8,25 +8,36 @@ type Pedido = {
   id: string;
   statusEntrega: string;
   statusFinanceiro: string;
+  statusPlanilha?: string | null;
   canhotoUrl?: string | null;
   comprovantePagamentoUrl?: string | null;
 };
 
-const LABEL_STATUS: Record<string, string> = {
+export const LABEL_STATUS: Record<string, string> = {
   AGUARDANDO_ACEITE: "Aguardando aceite",
   AGUARDANDO_CARREGAMENTO: "Aguardando carregamento",
   EM_ROTA: "Em rota de entrega",
+  AGUARDANDO_CANHOTO: "Entregue (planilha) — aguardando canhoto",
   ENTREGUE: "Entregue",
   REENTREGA: "Reentrega",
   CANCELADO: "Cancelado",
   DEVOLVIDO: "Devolvido",
 };
 
+const CLASSE_BADGE: Record<string, string> = {
+  AGUARDANDO_CANHOTO: "badge-aguardando-canhoto",
+};
+
 // Só não dá pra anexar canhoto quando o pedido já chegou num desses estados finais.
 const STATUS_SEM_CANHOTO = ["ENTREGUE", "CANCELADO"];
 
-export function BadgeStatus({ status }: { status: string }) {
-  return <span className="badge">{LABEL_STATUS[status] ?? status}</span>;
+export function BadgeStatus({ status, statusPlanilha }: { status: string; statusPlanilha?: string | null }) {
+  return (
+    <span>
+      <span className={`badge ${CLASSE_BADGE[status] ?? ""}`}>{LABEL_STATUS[status] ?? status}</span>
+      {statusPlanilha && <div className="status-planilha-info">Planilha: {statusPlanilha}</div>}
+    </span>
+  );
 }
 
 async function enviarAcao(pedidoId: string, payload: Record<string, any>) {
@@ -131,7 +142,11 @@ export default function PedidoAcoes({ pedido, isAdmin = false }: { pedido: Pedid
         />
       </label>
       <button disabled={carregando || !canhoto} onClick={anexarCanhoto}>
-        {carregando ? "Enviando..." : "Anexar e marcar como entregue"}
+        {carregando
+          ? "Enviando..."
+          : pedido.statusEntrega === "AGUARDANDO_CANHOTO"
+            ? "Anexar canhoto e finalizar"
+            : "Anexar e marcar como entregue"}
       </button>
     </div>
   ) : null;

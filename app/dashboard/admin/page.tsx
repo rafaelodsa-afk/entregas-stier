@@ -57,6 +57,7 @@ export default async function AdminDashboard({
           cliente: p.cliente,
           transportador: p.transportador,
           statusEntrega: p.statusEntrega,
+          statusPlanilha: p.statusPlanilha,
           statusFinanceiro: p.statusFinanceiro,
           valorPedido: Number(p.valorPedido),
           canhotoUrl: p.canhotoUrl,
