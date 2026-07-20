@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import Image from "next/image";
 import { verifySession, COOKIE_NAME, podeGerenciarUsuariosPorPapel, podeVerTudo } from "@/lib/auth";
 import LogoutButton from "@/components/LogoutButton";
 import NavTabs from "@/components/NavTabs";
@@ -22,7 +23,10 @@ export default async function DashboardLayout({ children }: { children: React.Re
   return (
     <div className="app-shell">
       <header className="topbar">
-        <span className="brand">STIER · Controle de Entregas</span>
+        <span className="brand">
+          <Image src="/logo-stier.png" alt="Stier" width={700} height={160} priority />
+          <span className="brand-texto">Controle de Entregas</span>
+        </span>
         <div className="user-info">
           <span>{sessao.nome}</span>
           <LogoutButton />

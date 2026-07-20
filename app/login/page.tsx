@@ -2,6 +2,7 @@
 
 import { useState, FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 
 export default function LoginPage() {
   const [username, setUsername] = useState("");
@@ -42,8 +43,10 @@ export default function LoginPage() {
   return (
     <div className="login-wrap">
       <form className="login-card" onSubmit={handleSubmit}>
-        <h1>Stier — Controle de Entregas</h1>
-        <p className="login-sub">Acesso de transportadores, motoristas e administração</p>
+        <div className="login-logo">
+          <Image src="/logo-stier.png" alt="Stier" width={700} height={160} priority />
+        </div>
+        <p className="login-sub">Controle de Entregas — acesso de transportadores, motoristas e administração</p>
         {erro && <p className="erro">{erro}</p>}
         <label>
           Usuário

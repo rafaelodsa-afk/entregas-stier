@@ -51,6 +51,16 @@ button {
   font-size: 18px;
   margin: 0 0 4px;
 }
+.login-logo {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 2px;
+}
+.login-logo img {
+  width: 100%;
+  max-width: 190px;
+  height: auto;
+}
 .login-sub {
   color: var(--muted);
   font-size: 12.5px;
@@ -111,10 +121,26 @@ button {
   margin-bottom: 20px;
 }
 .brand {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.brand img {
+  height: 26px;
+  width: auto;
+  display: block;
+}
+.brand-texto {
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  font-size: 14px;
+  font-size: 13px;
+  white-space: nowrap;
+}
+@media (max-width: 480px) {
+  .brand-texto {
+    display: none;
+  }
 }
 .user-info {
   display: flex;
