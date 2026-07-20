@@ -71,6 +71,8 @@ model Pedido {
   observacaoProblema String?
   canhotoUrl         String?
   canhotoTipo        String?
+  comprovantePagamentoUrl  String?
+  comprovantePagamentoTipo String?
   dataCriacao        DateTime          @default(now())
   dataEntrega        DateTime?
   acertoConfirmadoEm DateTime?

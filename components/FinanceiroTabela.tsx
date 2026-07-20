@@ -10,6 +10,7 @@ type PedidoAberto = {
   formaPagamento: string;
   valorPedido: number;
   dataEntrega: Date | null;
+  comprovantePagamentoUrl: string | null;
 };
 
 const LABEL_PAGAMENTO: Record<string, string> = {
@@ -82,6 +83,7 @@ export default function FinanceiroTabela({ pedidos }: { pedidos: PedidoAberto[] 
               <th>Pagamento</th>
               <th>Entregue em</th>
               <th>Valor</th>
+              <th>Comprovante</th>
               <th>Ações</th>
             </tr>
           </thead>
@@ -94,6 +96,15 @@ export default function FinanceiroTabela({ pedidos }: { pedidos: PedidoAberto[] 
                 <td>{LABEL_PAGAMENTO[p.formaPagamento] ?? p.formaPagamento}</td>
                 <td>{formatarData(p.dataEntrega)}</td>
                 <td>{formatarValor(p.valorPedido)}</td>
+                <td>
+                  {p.comprovantePagamentoUrl ? (
+                    <a className="link-canhoto" href={p.comprovantePagamentoUrl} target="_blank" rel="noreferrer">
+                      Ver comprovante
+                    </a>
+                  ) : (
+                    <span className="muted">Sem comprovante anexado</span>
+                  )}
+                </td>
                 <td>
                   <button disabled={idEmAcao === p.id} onClick={() => marcarComoRecebido(p.id)}>
                     {idEmAcao === p.id ? "..." : "Marcar como recebido"}

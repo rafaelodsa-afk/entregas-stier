@@ -9,6 +9,7 @@ type Pedido = {
   statusEntrega: string;
   statusFinanceiro: string;
   canhotoUrl?: string | null;
+  comprovantePagamentoUrl?: string | null;
 };
 
 const LABEL_STATUS: Record<string, string> = {
@@ -44,6 +45,7 @@ export default function PedidoAcoes({ pedido, isAdmin = false }: { pedido: Pedid
   const [carregando, setCarregando] = useState(false);
   const [erro, setErro] = useState("");
   const [canhoto, setCanhoto] = useState<File | null>(null);
+  const [comprovante, setComprovante] = useState<File | null>(null);
   const router = useRouter();
 
   async function acaoSimples(payload: Record<string, any>) {
@@ -86,7 +88,35 @@ export default function PedidoAcoes({ pedido, isAdmin = false }: { pedido: Pedid
     }
   }
 
+  async function anexarComprovante() {
+    if (!comprovante) {
+      setErro("Selecione a foto ou PDF do comprovante de pagamento.");
+      return;
+    }
+    setCarregando(true);
+    setErro("");
+    try {
+      const blob = await upload(`comprovantes-pagamento/pedido-${pedido.id}-${Date.now()}-${comprovante.name}`, comprovante, {
+        access: "public",
+        handleUploadUrl: "/api/upload",
+      });
+      await enviarAcao(pedido.id, {
+        acao: "anexarComprovantePagamento",
+        comprovanteUrl: blob.url,
+        comprovanteTipo: comprovante.type.startsWith("image/") ? "foto" : "pdf",
+      });
+      setComprovante(null);
+      router.refresh();
+    } catch (err: any) {
+      console.error(err);
+      setErro(err.message || "Não foi possível enviar o comprovante.");
+    } finally {
+      setCarregando(false);
+    }
+  }
+
   const podeAnexarCanhoto = !STATUS_SEM_CANHOTO.includes(pedido.statusEntrega);
+  const podeAnexarComprovante = pedido.statusFinanceiro === "AGUARDANDO_ACERTO";
 
   const blocoCanhoto = podeAnexarCanhoto ? (
     <div className="canhoto-upload">
@@ -106,9 +136,33 @@ export default function PedidoAcoes({ pedido, isAdmin = false }: { pedido: Pedid
     </div>
   ) : null;
 
+  const blocoComprovante = podeAnexarComprovante ? (
+    <div className="canhoto-upload">
+      <label className="canhoto-input-label">
+        {comprovante ? comprovante.name : "Anexar comprovante de pagamento"}
+        <input
+          type="file"
+          accept="image/jpeg,image/png,image/webp,application/pdf"
+          capture="environment"
+          onChange={(e) => setComprovante(e.target.files?.[0] ?? null)}
+          hidden
+        />
+      </label>
+      <button disabled={carregando || !comprovante} onClick={anexarComprovante}>
+        {carregando ? "Enviando..." : "Anexar comprovante"}
+      </button>
+    </div>
+  ) : null;
+
   const linkCanhoto = pedido.canhotoUrl ? (
     <a className="link-canhoto" href={pedido.canhotoUrl} target="_blank" rel="noreferrer">
       Ver canhoto
+    </a>
+  ) : null;
+
+  const linkComprovante = pedido.comprovantePagamentoUrl ? (
+    <a className="link-canhoto" href={pedido.comprovantePagamentoUrl} target="_blank" rel="noreferrer">
+      Ver comprovante de pagamento
     </a>
   ) : null;
 
@@ -121,6 +175,7 @@ export default function PedidoAcoes({ pedido, isAdmin = false }: { pedido: Pedid
           </button>
         )}
         {linkCanhoto}
+        {linkComprovante}
         {blocoCanhoto}
         {erro && <p className="erro" style={{ marginTop: 6 }}>{erro}</p>}
       </div>
@@ -141,6 +196,8 @@ export default function PedidoAcoes({ pedido, isAdmin = false }: { pedido: Pedid
       )}
       {blocoCanhoto}
       {linkCanhoto}
+      {blocoComprovante}
+      {linkComprovante}
       {erro && <p className="erro" style={{ marginTop: 6, width: "100%" }}>{erro}</p>}
     </div>
   );

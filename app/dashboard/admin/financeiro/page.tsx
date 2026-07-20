@@ -50,6 +50,7 @@ export default async function FinanceiroPage({
           formaPagamento: p.formaPagamento,
           valorPedido: Number(p.valorPedido),
           dataEntrega: p.dataEntrega,
+          comprovantePagamentoUrl: p.comprovantePagamentoUrl,
         }))}
       />
 

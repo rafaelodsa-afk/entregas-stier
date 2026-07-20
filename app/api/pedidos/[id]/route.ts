@@ -48,7 +48,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   }
 
   const data: Record<string, any> = {};
-  let statusParaHistorico = pedido.statusEntrega;
+  let statusParaHistorico: string = pedido.statusEntrega;
 
   switch (body.acao) {
     case "avancarStatus": {
@@ -83,6 +83,20 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       data.statusEntrega = body.statusEntrega;
       data.observacaoProblema = body.observacao ?? null;
       statusParaHistorico = body.statusEntrega;
+      break;
+    }
+    case "anexarComprovantePagamento": {
+      // Só evidência — nunca confirma o acerto sozinho, isso continua
+      // exigindo uma ação separada de admin/analista/master.
+      if (pedido.statusFinanceiro !== "AGUARDANDO_ACERTO") {
+        return NextResponse.json({ erro: "Este pedido não está aguardando acerto financeiro" }, { status: 400 });
+      }
+      if (!body.comprovanteUrl) {
+        return NextResponse.json({ erro: "Envie o comprovante" }, { status: 400 });
+      }
+      data.comprovantePagamentoUrl = body.comprovanteUrl;
+      data.comprovantePagamentoTipo = body.comprovanteTipo || "foto";
+      statusParaHistorico = "Comprovante de pagamento anexado";
       break;
     }
     case "confirmarAcerto": {

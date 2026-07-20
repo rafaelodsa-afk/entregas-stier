@@ -12,6 +12,7 @@ type Pedido = {
   statusFinanceiro: string;
   valorPedido: number;
   canhotoUrl: string | null;
+  comprovantePagamentoUrl: string | null;
 };
 
 const LABEL_STATUS: Record<string, string> = {

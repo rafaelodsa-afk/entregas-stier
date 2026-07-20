@@ -60,6 +60,7 @@ export default async function AdminDashboard({
           statusFinanceiro: p.statusFinanceiro,
           valorPedido: Number(p.valorPedido),
           canhotoUrl: p.canhotoUrl,
+          comprovantePagamentoUrl: p.comprovantePagamentoUrl,
         }))}
       />
     </div>
