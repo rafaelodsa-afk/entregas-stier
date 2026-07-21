@@ -3,6 +3,6 @@
 // necessariamente avisar com destaque — vale a pena conferir de tempos em
 // tempos em:
 //   Neon (Postgres):    https://neon.tech/docs/introduction/plans
-//   Vercel Blob:        https://vercel.com/docs/storage/vercel-blob/usage-and-pricing
+//   Cloudflare R2:       https://developers.cloudflare.com/r2/pricing/
 export const LIMITE_BANCO_BYTES = 0.5 * 1024 * 1024 * 1024; // 0,5 GB — Neon free tier
-export const LIMITE_BLOB_BYTES = 1 * 1024 * 1024 * 1024; // 1 GB — Vercel Blob free tier (Hobby)
+export const LIMITE_R2_BYTES = 10 * 1024 * 1024 * 1024; // 10 GB — Cloudflare R2 free tier (Standard storage)

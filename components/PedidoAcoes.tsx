@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { upload } from "@vercel/blob/client";
 import { comprimirImagem } from "@/lib/comprimirImagem";
+import { enviarArquivoParaR2 } from "@/lib/uploadR2Client";
 import { LABEL_STATUS, CLASSE_BADGE } from "@/lib/statusLabels";
 
 export { LABEL_STATUS };
@@ -70,14 +70,11 @@ export default function PedidoAcoes({ pedido, isAdmin = false }: { pedido: Pedid
     setErro("");
     try {
       const arquivo = await comprimirImagem(canhoto);
-      const blob = await upload(`canhotos/pedido-${pedido.id}-${Date.now()}-${arquivo.name}`, arquivo, {
-        access: "public",
-        handleUploadUrl: "/api/upload",
-      });
+      const { key, tipo } = await enviarArquivoParaR2(arquivo, "canhotos", pedido.id);
       await enviarAcao(pedido.id, {
         acao: "finalizarEntrega",
-        canhotoUrl: blob.url,
-        canhotoTipo: arquivo.type.startsWith("image/") ? "foto" : "pdf",
+        canhotoUrl: key,
+        canhotoTipo: tipo,
       });
       setCanhoto(null);
       router.refresh();
@@ -98,14 +95,11 @@ export default function PedidoAcoes({ pedido, isAdmin = false }: { pedido: Pedid
     setErro("");
     try {
       const arquivo = await comprimirImagem(comprovante);
-      const blob = await upload(`comprovantes-pagamento/pedido-${pedido.id}-${Date.now()}-${arquivo.name}`, arquivo, {
-        access: "public",
-        handleUploadUrl: "/api/upload",
-      });
+      const { key, tipo } = await enviarArquivoParaR2(arquivo, "comprovantes-pagamento", pedido.id);
       await enviarAcao(pedido.id, {
         acao: "anexarComprovantePagamento",
-        comprovanteUrl: blob.url,
-        comprovanteTipo: arquivo.type.startsWith("image/") ? "foto" : "pdf",
+        comprovanteUrl: key,
+        comprovanteTipo: tipo,
       });
       setComprovante(null);
       router.refresh();

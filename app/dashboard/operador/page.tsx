@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { verifySession, COOKIE_NAME } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { comLinksAssinados } from "@/lib/r2";
 import ListaPedidosOperador from "@/components/ListaPedidosOperador";
 
 export const dynamic = "force-dynamic";
@@ -17,6 +18,7 @@ export default async function OperadorDashboard() {
     orderBy: { dataCriacao: "desc" },
   });
   const pendentes = pedidos.filter((p) => !["ENTREGUE", "CANCELADO", "DEVOLVIDO", "REENTREGA"].includes(p.statusEntrega));
+  const pedidosComLinks = await Promise.all(pedidos.map(comLinksAssinados));
 
   return (
     <div>
@@ -24,7 +26,7 @@ export default async function OperadorDashboard() {
       <p className="muted" style={{ marginBottom: 18 }}>{pendentes.length} pedido(s) pendente(s) de {pedidos.length} no total</p>
 
       <ListaPedidosOperador
-        pedidos={pedidos.map((p) => ({
+        pedidos={pedidosComLinks.map((p) => ({
           id: p.id,
           cliente: p.cliente,
           cidade: p.cidade,

@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { upload } from "@vercel/blob/client";
 import { comprimirImagem } from "@/lib/comprimirImagem";
+import { enviarArquivoParaR2 } from "@/lib/uploadR2Client";
 
 type PedidoAberto = {
   id: string;
@@ -44,17 +44,14 @@ export default function FinanceiroTabela({ pedidos }: { pedidos: PedidoAberto[] 
     setIdEmAcao(id);
     try {
       const arquivoComprimido = await comprimirImagem(arquivo);
-      const blob = await upload(`comprovantes-pagamento/pedido-${id}-${Date.now()}-${arquivoComprimido.name}`, arquivoComprimido, {
-        access: "public",
-        handleUploadUrl: "/api/upload",
-      });
+      const { key, tipo } = await enviarArquivoParaR2(arquivoComprimido, "comprovantes-pagamento", id);
       const res = await fetch(`/api/pedidos/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           acao: "anexarComprovantePagamento",
-          comprovanteUrl: blob.url,
-          comprovanteTipo: arquivoComprimido.type.startsWith("image/") ? "foto" : "pdf",
+          comprovanteUrl: key,
+          comprovanteTipo: tipo,
         }),
       });
       if (!res.ok) {
@@ -62,7 +59,9 @@ export default function FinanceiroTabela({ pedidos }: { pedidos: PedidoAberto[] 
         setErro(data.erro || "Não foi possível anexar o comprovante.");
         return;
       }
-      setLista((atual) => atual.map((p) => (p.id === id ? { ...p, comprovantePagamentoUrl: blob.url } : p)));
+      // Não atualiza a URL localmente aqui de propósito: a chave do R2 não é
+      // uma URL utilizável direto — precisa vir do servidor já assinada, o
+      // que o router.refresh() abaixo resolve.
       setArquivos((atual) => ({ ...atual, [id]: null }));
       router.refresh();
     } catch (err) {

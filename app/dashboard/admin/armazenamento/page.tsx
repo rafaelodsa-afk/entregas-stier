@@ -2,8 +2,8 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { verifySession, COOKIE_NAME, podeVerTudo, podeExcluirMes } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { listarTodosOsArquivos } from "@/lib/blobUso";
-import { LIMITE_BANCO_BYTES, LIMITE_BLOB_BYTES } from "@/lib/limitesArmazenamento";
+import { listarTodosOsArquivosR2 } from "@/lib/r2";
+import { LIMITE_BANCO_BYTES, LIMITE_R2_BYTES } from "@/lib/limitesArmazenamento";
 import GraficoUso from "@/components/GraficoUso";
 import ExportarMes from "@/components/ExportarMes";
 import ExcluirMes from "@/components/ExcluirMes";
@@ -26,13 +26,13 @@ export default async function ArmazenamentoPage() {
 
   const [resultadoTamanho, arquivos, pedidos, exportacoes] = await Promise.all([
     prisma.$queryRaw<{ tamanho: bigint }[]>`SELECT pg_database_size(current_database()) AS tamanho`,
-    listarTodosOsArquivos(),
+    listarTodosOsArquivosR2(),
     prisma.pedido.findMany({ select: { id: true, dataPrevistaEntrega: true, dataCriacao: true } }),
     prisma.exportacaoMensal.findMany(),
   ]);
 
   const tamanhoBanco = Number(resultadoTamanho[0]?.tamanho ?? 0);
-  const tamanhoBlob = arquivos.reduce((soma, a) => soma + a.size, 0);
+  const tamanhoArquivos = arquivos.reduce((soma, a) => soma + a.size, 0);
   const exportacaoPorMes = new Map(exportacoes.map((e) => [e.mes, e]));
 
   // Mês de referência de cada pedido: data prevista de entrega quando
@@ -65,10 +65,10 @@ export default async function ArmazenamentoPage() {
         </div>
         <div className="kpi-card amber">
           <div className="kpi-value">{arquivos.length}</div>
-          <div className="kpi-label">Arquivos no Blob (canhotos + comprovantes)</div>
+          <div className="kpi-label">Arquivos no R2 (canhotos + comprovantes)</div>
         </div>
         <div className="kpi-card violet">
-          <div className="kpi-value">{formatarGB(tamanhoBanco + tamanhoBlob)}</div>
+          <div className="kpi-value">{formatarGB(tamanhoBanco + tamanhoArquivos)}</div>
           <div className="kpi-label">Total usado (banco + arquivos)</div>
         </div>
       </div>
@@ -78,7 +78,7 @@ export default async function ArmazenamentoPage() {
           <GraficoUso titulo="Banco de dados (Postgres/Neon)" usadoBytes={tamanhoBanco} limiteBytes={LIMITE_BANCO_BYTES} cor="#4e8fe3" />
         </div>
         <div className="form-card">
-          <GraficoUso titulo="Arquivos (Vercel Blob)" usadoBytes={tamanhoBlob} limiteBytes={LIMITE_BLOB_BYTES} cor="#e3a73e" />
+          <GraficoUso titulo="Arquivos (Cloudflare R2)" usadoBytes={tamanhoArquivos} limiteBytes={LIMITE_R2_BYTES} cor="#e3a73e" />
         </div>
       </div>
 

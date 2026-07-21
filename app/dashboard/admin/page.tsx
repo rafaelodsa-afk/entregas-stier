@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { verifySession, COOKIE_NAME, podeVerTudo } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { comLinksAssinados } from "@/lib/r2";
 import ImportarPlanilha from "@/components/ImportarPlanilha";
 import CriarPedido from "@/components/CriarPedido";
 import FiltroTransportador from "@/components/FiltroTransportador";
@@ -28,6 +29,7 @@ export default async function AdminDashboard({
 
   const pendentes = pedidos.filter((p) => !["ENTREGUE", "CANCELADO", "DEVOLVIDO", "REENTREGA"].includes(p.statusEntrega));
   const acerto = pedidos.filter((p) => p.statusFinanceiro === "AGUARDANDO_ACERTO");
+  const pedidosComLinks = await Promise.all(pedidos.map(comLinksAssinados));
 
   return (
     <div>
@@ -54,7 +56,7 @@ export default async function AdminDashboard({
       <CriarPedido />
 
       <TabelaPedidos
-        pedidos={pedidos.map((p) => ({
+        pedidos={pedidosComLinks.map((p) => ({
           id: p.id,
           cliente: p.cliente,
           transportador: p.transportador,

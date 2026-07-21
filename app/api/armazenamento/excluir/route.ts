@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { del } from "@vercel/blob";
+import { apagarArquivosR2 } from "@/lib/r2";
 import { prisma } from "@/lib/db";
 import { podeExcluirMes } from "@/lib/auth";
 import { resumoDoMes } from "@/lib/resumoMes";
@@ -7,7 +7,7 @@ import { resumoDoMes } from "@/lib/resumoMes";
 const REGEX_MES = /^\d{4}-\d{2}$/;
 
 // Ação irreversível — apaga de verdade os pedidos (+ histórico, em
-// cascata) e os arquivos correspondentes no Vercel Blob. Só master/admin,
+// cascata) e os arquivos correspondentes no Cloudflare R2. Só master/admin,
 // só depois de o mês já ter sido exportado pelo menos uma vez, e só se o
 // mês de confirmação enviado bater exatamente com o mês pedido (a tela já
 // trava isso no cliente, mas confia-se pouco: confere de novo aqui).
@@ -47,11 +47,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ erro: `Nenhum pedido encontrado para ${mes}` }, { status: 404 });
   }
 
-  if (resumo.urlsParaExcluir.length > 0) {
+  if (resumo.chavesParaExcluir.length > 0) {
     try {
-      await del(resumo.urlsParaExcluir);
+      await apagarArquivosR2(resumo.chavesParaExcluir);
     } catch (err) {
-      console.error("Erro ao apagar arquivos do Blob:", err);
+      console.error("Erro ao apagar arquivos do R2:", err);
       return NextResponse.json({ erro: "Não foi possível apagar os arquivos do armazenamento. Nada foi excluído." }, { status: 500 });
     }
   }

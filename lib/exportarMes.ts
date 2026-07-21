@@ -1,6 +1,7 @@
 import * as XLSX from "xlsx";
 import JSZip from "jszip";
 import { prisma } from "@/lib/db";
+import { baixarArquivoR2 } from "@/lib/r2";
 
 // Mesmo critério de "mês do pedido" usado no painel de armazenamento: data
 // prevista de entrega quando existe, senão data de criação.
@@ -54,8 +55,8 @@ function gerarPlanilha(pedidos: Awaited<ReturnType<typeof pedidosDoMes>>): Buffe
     "Status na Planilha": p.statusPlanilha ?? "",
     "Status Financeiro": p.statusFinanceiro,
     Observação: p.observacaoProblema ?? "",
-    "Canhoto (URL)": p.canhotoUrl ?? "",
-    "Comprovante de Pagamento (URL)": p.comprovantePagamentoUrl ?? "",
+    "Canhoto (arquivo)": p.canhotoUrl ?? "",
+    "Comprovante de Pagamento (arquivo)": p.comprovantePagamentoUrl ?? "",
     "Data de Criação": p.dataCriacao.toISOString(),
     "Data de Entrega": p.dataEntrega ? p.dataEntrega.toISOString() : "",
     "Acerto Confirmado Em": p.acertoConfirmadoEm ? p.acertoConfirmadoEm.toISOString() : "",
@@ -89,29 +90,20 @@ export async function gerarZipDoMes(mes: string, nomeUsuario: string) {
 
   for (const p of pedidos) {
     if (p.canhotoUrl) {
-      try {
-        const resp = await fetch(p.canhotoUrl);
-        if (resp.ok) {
-          const buffer = Buffer.from(await resp.arrayBuffer());
-          const ext = extensaoDaUrl(p.canhotoUrl, p.canhotoTipo === "pdf" ? "pdf" : "jpg");
-          pastaCanhotos.file(`canhoto_${p.id}.${ext}`, buffer);
-          totalCanhotos++;
-        }
-      } catch {
-        // Arquivo pode ter sumido do Blob por algum motivo — não trava a exportação inteira por isso.
+      const buffer = await baixarArquivoR2(p.canhotoUrl);
+      if (buffer) {
+        const ext = extensaoDaUrl(p.canhotoUrl, p.canhotoTipo === "pdf" ? "pdf" : "jpg");
+        pastaCanhotos.file(`canhoto_${p.id}.${ext}`, buffer);
+        totalCanhotos++;
       }
+      // Se vier null (arquivo sumiu do R2 por algum motivo), não trava a exportação inteira por isso.
     }
     if (p.comprovantePagamentoUrl) {
-      try {
-        const resp = await fetch(p.comprovantePagamentoUrl);
-        if (resp.ok) {
-          const buffer = Buffer.from(await resp.arrayBuffer());
-          const ext = extensaoDaUrl(p.comprovantePagamentoUrl, p.comprovantePagamentoTipo === "pdf" ? "pdf" : "jpg");
-          pastaComprovantes.file(`comprovante_${p.id}.${ext}`, buffer);
-          totalComprovantes++;
-        }
-      } catch {
-        // idem
+      const buffer = await baixarArquivoR2(p.comprovantePagamentoUrl);
+      if (buffer) {
+        const ext = extensaoDaUrl(p.comprovantePagamentoUrl, p.comprovantePagamentoTipo === "pdf" ? "pdf" : "jpg");
+        pastaComprovantes.file(`comprovante_${p.id}.${ext}`, buffer);
+        totalComprovantes++;
       }
     }
   }

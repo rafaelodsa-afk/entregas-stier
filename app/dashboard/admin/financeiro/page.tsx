@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { verifySession, COOKIE_NAME, podeVerTudo } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { ehPagamentoAVista, ehOperacaoDeVenda } from "@/lib/pedidos";
+import { comLinksAssinados } from "@/lib/r2";
 import FiltroTransportador from "@/components/FiltroTransportador";
 import FinanceiroTabela from "@/components/FinanceiroTabela";
 import FinanceiroHistorico from "@/components/FinanceiroHistorico";
@@ -48,6 +49,11 @@ export default async function FinanceiroPage({
     take: 50,
   });
 
+  const [aguardandoAcertoComLinks, historicoComLinks] = await Promise.all([
+    Promise.all(aguardandoAcerto.map(comLinksAssinados)),
+    Promise.all(historico.map(comLinksAssinados)),
+  ]);
+
   return (
     <div>
       <h1 className="page-title">Financeiro</h1>
@@ -71,7 +77,7 @@ export default async function FinanceiroPage({
 
       <h2 style={{ marginTop: 28, marginBottom: 12 }}>Aguardando acerto</h2>
       <FinanceiroTabela
-        pedidos={aguardandoAcerto.map((p) => ({
+        pedidos={aguardandoAcertoComLinks.map((p) => ({
           id: p.id,
           cliente: p.cliente,
           transportador: p.transportador,
@@ -84,7 +90,7 @@ export default async function FinanceiroPage({
 
       <h2 style={{ marginTop: 28, marginBottom: 12 }}>Histórico de acertos recebidos</h2>
       <FinanceiroHistorico
-        pedidos={historico.map((p) => ({
+        pedidos={historicoComLinks.map((p) => ({
           id: p.id,
           cliente: p.cliente,
           transportador: p.transportador,

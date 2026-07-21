@@ -3,6 +3,7 @@ import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import { verifySession, COOKIE_NAME, podeVerTudo } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { comLinksAssinados } from "@/lib/r2";
 import { LABEL_STATUS } from "@/lib/statusLabels";
 import { formatarDataPura } from "@/lib/formatarData";
 import { BadgeStatus } from "@/components/PedidoAcoes";
@@ -42,11 +43,12 @@ export default async function DetalhePedidoPage({ params }: { params: { id: stri
   const sessao = token ? await verifySession(token) : null;
   if (!sessao || !podeVerTudo(sessao.papel)) redirect("/dashboard");
 
-  const pedido = await prisma.pedido.findUnique({
+  const pedidoOriginal = await prisma.pedido.findUnique({
     where: { id: params.id },
     include: { historico: { orderBy: { data: "desc" } } },
   });
-  if (!pedido) notFound();
+  if (!pedidoOriginal) notFound();
+  const pedido = await comLinksAssinados(pedidoOriginal);
 
   return (
     <div>
