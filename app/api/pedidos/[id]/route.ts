@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { podeVerTudo } from "@/lib/auth";
+import { podeVerTudo, podeFinalizarSemCanhoto } from "@/lib/auth";
 import { geraPendenciaFinanceira } from "@/lib/pedidos";
 
 // Compara nomes de transportador ignorando maiúsculas/minúsculas e espaços
@@ -71,6 +71,25 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
         data.canhotoTipo = body.canhotoTipo || "foto";
       }
       statusParaHistorico = "ENTREGUE";
+      break;
+    }
+    case "finalizarSemComprovante": {
+      // Só pra pedidos legados (anteriores ao sistema) — pula a exigência
+      // de canhoto, então fica restrito a master/admin e sempre exige uma
+      // justificativa registrada permanentemente.
+      if (!podeFinalizarSemCanhoto(papel)) {
+        return NextResponse.json({ erro: "Sem permissão para finalizar sem comprovante" }, { status: 403 });
+      }
+      const justificativa = String(body.justificativa ?? "").trim();
+      if (!justificativa) {
+        return NextResponse.json({ erro: "Informe uma justificativa" }, { status: 400 });
+      }
+      data.statusEntrega = "ENTREGUE";
+      data.dataEntrega = new Date();
+      data.statusFinanceiro = geraPendenciaFinanceira(pedido.operacao, pedido.formaPagamento) ? "AGUARDANDO_ACERTO" : "NA";
+      data.finalizadoSemCanhoto = true;
+      data.justificativaSemCanhoto = justificativa;
+      statusParaHistorico = `Entregue sem comprovante (pedido legado) — ${justificativa}`;
       break;
     }
     case "reportarProblema": {

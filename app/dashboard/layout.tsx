@@ -6,6 +6,7 @@ import LogoutButton from "@/components/LogoutButton";
 import NavTabs from "@/components/NavTabs";
 import AlterarMinhaSenha from "@/components/AlterarMinhaSenha";
 import RefreshButton from "@/components/RefreshButton";
+import ThemeToggle from "@/components/ThemeToggle";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const token = cookies().get(COOKIE_NAME)?.value;
@@ -34,6 +35,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
           <span>{sessao.nome}</span>
           <RefreshButton />
           <AlterarMinhaSenha />
+          <ThemeToggle />
           <LogoutButton />
         </div>
       </header>

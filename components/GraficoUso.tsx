@@ -30,7 +30,7 @@ export default function GraficoUso({
     <div className="grafico-donut-wrap">
       <h3 style={{ marginBottom: 8 }}>{titulo}</h3>
       <svg viewBox="0 0 180 180" width={tamanho} height={tamanho}>
-        <circle cx={centro} cy={centro} r={raio} fill="none" stroke="#20242a" strokeWidth="24" />
+        <circle cx={centro} cy={centro} r={raio} fill="none" stroke="var(--line)" strokeWidth="24" />
         {usadoClamped > 0 && (
           <circle
             cx={centro}
@@ -56,7 +56,7 @@ export default function GraficoUso({
           Usado <strong>{formatarGB(usadoBytes)}</strong>
         </li>
         <li>
-          <span className="legenda-cor" style={{ background: "#20242a" }} />
+          <span className="legenda-cor" style={{ background: "var(--line)" }} />
           Livre <strong>{formatarGB(livre)}</strong>
         </li>
         <li className="muted">Limite do plano: {formatarGB(limiteBytes)}</li>

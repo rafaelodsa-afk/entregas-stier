@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import Script from "next/script";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -27,6 +28,15 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="pt-BR">
+      <head>
+        {/* Aplica o tema salvo antes da primeira pintura da página, pra
+            quem já escolheu "claro" não ver um flash de tela escura no
+            carregamento. Escuro continua sendo o padrão pra quem nunca
+            escolheu nada. */}
+        <Script id="tema-inicial" strategy="beforeInteractive">
+          {`(function(){try{var t=localStorage.getItem('stier-theme');if(t==='light'){document.documentElement.setAttribute('data-theme','light');var m=document.querySelector('meta[name="theme-color"]');if(m)m.setAttribute('content','#eef0f3');}}catch(e){}})();`}
+        </Script>
+      </head>
       <body>{children}</body>
     </html>
   );

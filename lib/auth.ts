@@ -71,3 +71,9 @@ export function podeGerenciarUsuariosPorPapel(papel: SessionPayload["papel"], po
 export function podeExcluirMes(papel: SessionPayload["papel"]): boolean {
   return papel === "MASTER" || papel === "ADMIN";
 }
+
+// Marcar um pedido legado como entregue sem canhoto pula uma trava
+// importante do fluxo normal — só master/admin, nunca analista.
+export function podeFinalizarSemCanhoto(papel: SessionPayload["papel"]): boolean {
+  return papel === "MASTER" || papel === "ADMIN";
+}

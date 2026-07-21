@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import PedidoAcoes, { BadgeStatus, LABEL_STATUS } from "@/components/PedidoAcoes";
+import PedidoAcoes, { BadgeStatus } from "@/components/PedidoAcoes";
 
 type Pedido = {
   id: string;
@@ -15,24 +15,16 @@ type Pedido = {
   valorPedido: number;
   canhotoUrl: string | null;
   comprovantePagamentoUrl: string | null;
+  finalizadoSemCanhoto: boolean;
 };
 
-export default function TabelaPedidos({ pedidos }: { pedidos: Pedido[] }) {
-  const [busca, setBusca] = useState("");
-  const [statusFiltro, setStatusFiltro] = useState("");
+// Componente só de apresentação — recebe a lista já filtrada (busca +
+// status + transportador ficam no PainelPedidos, que fica em volta desta
+// tabela e também mostra os KPIs).
+export default function TabelaPedidos({ pedidos, podeFinalizarLegado = false }: { pedidos: Pedido[]; podeFinalizarLegado?: boolean }) {
   const [excluindoId, setExcluindoId] = useState<string | null>(null);
   const [erro, setErro] = useState("");
   const router = useRouter();
-
-  const buscaNormalizada = busca.trim().toLowerCase();
-  const filtrados = pedidos.filter((p) => {
-    if (statusFiltro && p.statusEntrega !== statusFiltro) return false;
-    if (buscaNormalizada) {
-      const alvo = `${p.id} ${p.cliente}`.toLowerCase();
-      if (!alvo.includes(buscaNormalizada)) return false;
-    }
-    return true;
-  });
 
   async function excluir(id: string) {
     if (!window.confirm(`Excluir o pedido #${id} definitivamente? Essa ação não pode ser desfeita.`)) {
@@ -58,24 +50,6 @@ export default function TabelaPedidos({ pedidos }: { pedidos: Pedido[] }) {
 
   return (
     <div>
-      <div className="filtros-pedidos">
-        <input
-          type="text"
-          placeholder="Buscar por nº do pedido ou cliente..."
-          value={busca}
-          onChange={(e) => setBusca(e.target.value)}
-          className="busca-pedidos"
-        />
-        <select value={statusFiltro} onChange={(e) => setStatusFiltro(e.target.value)} className="filtro-transportador">
-          <option value="">Todos os status</option>
-          {Object.entries(LABEL_STATUS).map(([valor, label]) => (
-            <option key={valor} value={valor}>
-              {label}
-            </option>
-          ))}
-        </select>
-      </div>
-
       {erro && <p className="erro" style={{ marginBottom: 10 }}>{erro}</p>}
 
       <table className="pedidos-table">
@@ -91,17 +65,17 @@ export default function TabelaPedidos({ pedidos }: { pedidos: Pedido[] }) {
           </tr>
         </thead>
         <tbody>
-          {filtrados.map((p) => (
+          {pedidos.map((p) => (
             <tr key={p.id}>
               <td><Link className="link-canhoto" href={`/dashboard/admin/pedidos/${p.id}`}>#{p.id}</Link></td>
               <td>{p.cliente}</td>
               <td>{p.transportador}</td>
-              <td><BadgeStatus status={p.statusEntrega} statusPlanilha={p.statusPlanilha} /></td>
+              <td><BadgeStatus status={p.statusEntrega} statusPlanilha={p.statusPlanilha} finalizadoSemCanhoto={p.finalizadoSemCanhoto} /></td>
               <td>{p.statusFinanceiro === "AGUARDANDO_ACERTO" ? <span className="badge badge-acerto">Aguardando acerto</span> : "—"}</td>
               <td>{p.valorPedido.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</td>
               <td>
                 <div className="acoes-linha">
-                  <PedidoAcoes pedido={p} isAdmin />
+                  <PedidoAcoes pedido={p} isAdmin podeFinalizarLegado={podeFinalizarLegado} />
                   <button className="btn-excluir" disabled={excluindoId === p.id} onClick={() => excluir(p.id)}>
                     {excluindoId === p.id ? "..." : "Excluir"}
                   </button>
@@ -109,7 +83,7 @@ export default function TabelaPedidos({ pedidos }: { pedidos: Pedido[] }) {
               </td>
             </tr>
           ))}
-          {filtrados.length === 0 && (
+          {pedidos.length === 0 && (
             <tr>
               <td colSpan={7} className="muted" style={{ textAlign: "center", padding: 20 }}>
                 Nenhum pedido encontrado.

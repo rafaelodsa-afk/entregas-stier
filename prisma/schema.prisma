@@ -80,6 +80,10 @@ model Pedido {
   dataCriacao        DateTime          @default(now())
   dataEntrega        DateTime?
   acertoConfirmadoEm DateTime?
+  // Pedido antigo (anterior ao sistema), marcado como entregue por um
+  // admin/master sem canhoto anexado — permanente, nunca voltar a false.
+  finalizadoSemCanhoto     Boolean @default(false)
+  justificativaSemCanhoto  String?
   historico          HistoricoPedido[]
 
   @@index([transportador])

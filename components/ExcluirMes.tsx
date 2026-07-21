@@ -149,7 +149,7 @@ export default function ExcluirMes({ mesesExportados }: { mesesExportados: strin
 
       {erro && <p className="erro" style={{ marginTop: 10 }}>{erro}</p>}
       {sucesso && (
-        <p className="erro" style={{ background: "rgba(63,191,143,0.12)", borderColor: "rgba(63,191,143,0.4)", color: "#8fe3c4", marginTop: 10 }}>
+        <p className="erro" style={{ background: "rgba(63,191,143,0.12)", borderColor: "rgba(63,191,143,0.4)", color: "var(--teal)", marginTop: 10 }}>
           {sucesso}
         </p>
       )}

@@ -10,7 +10,7 @@ export default function GraficoDonut({ dados, tamanho = 180 }: { dados: Fatia[];
   return (
     <div className="grafico-donut-wrap">
       <svg viewBox="0 0 180 180" width={tamanho} height={tamanho}>
-        <circle cx={centro} cy={centro} r={raio} fill="none" stroke="#20242a" strokeWidth="24" />
+        <circle cx={centro} cy={centro} r={raio} fill="none" stroke="var(--line)" strokeWidth="24" />
         {total > 0 &&
           dados.map((d, i) => {
             if (d.valor === 0) return null;

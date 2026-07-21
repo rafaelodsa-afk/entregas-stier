@@ -6,12 +6,40 @@
   --text: #edeff2;
   --muted: #8d95a1;
   --amber: #e3a73e;
+  /* --amber é sempre claro (fica em cima de fundo com texto escuro em
+     cima, ex. botões) — --amber-text é a versão usada como cor de texto/
+     ícone direto sobre o fundo da página, que no modo claro precisa ser
+     mais escura pra manter contraste. */
+  --amber-text: #e3a73e;
+  --amber-ink: #1a1305;
   --teal: #3fbf8f;
   --red: #e15c4a;
   --blue: #4e8fe3;
   --violet: #a78bfa;
   --orange: #f0883e;
   --pink: #e35c9e;
+}
+
+/* Modo claro — mesmo papel semântico de cada variável, tons ajustados
+   pra manter contraste adequado sobre fundo claro. Modo escuro continua
+   sendo o padrão (:root acima); isto só se aplica quando o toggle marca
+   data-theme="light" no <html>. */
+[data-theme="light"] {
+  --bg-page: #eef0f3;
+  --bg-panel: #ffffff;
+  --bg-panel-2: #eceef2;
+  --line: #d8dce2;
+  --text: #1a1d21;
+  --muted: #5b6472;
+  --amber: #e3a73e;
+  --amber-text: #8a5c0e;
+  --amber-ink: #1a1305;
+  --teal: #0f6e4b;
+  --red: #a8321f;
+  --blue: #1f5aa8;
+  --violet: #7440c9;
+  --orange: #a04708;
+  --pink: #a02f6d;
 }
 
 * {
@@ -114,7 +142,7 @@ button {
 .erro {
   background: rgba(225, 92, 74, 0.12);
   border: 1px solid rgba(225, 92, 74, 0.4);
-  color: #ff9d8c;
+  color: var(--red);
   font-size: 12.5px;
   padding: 10px 12px;
   border-radius: 8px;
@@ -201,6 +229,19 @@ button {
   justify-content: center;
   padding: 7px;
 }
+.btn-tema {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 7px;
+}
+.tema-flutuante {
+  position: fixed;
+  top: 18px;
+  right: 18px;
+  background: var(--bg-panel);
+  z-index: 30;
+}
 .icone-girando {
   animation: girar 0.5s linear;
 }
@@ -231,8 +272,8 @@ button {
   color: var(--text);
 }
 .nav-tab-ativa {
-  color: var(--amber);
-  border-bottom-color: var(--amber);
+  color: var(--amber-text);
+  border-bottom-color: var(--amber-text);
 }
 .somente-leitura-aviso {
   display: flex;
@@ -240,7 +281,7 @@ button {
   gap: 8px;
   background: rgba(78, 143, 227, 0.1);
   border: 1px solid rgba(78, 143, 227, 0.3);
-  color: #8fb8f0;
+  color: var(--blue);
   font-size: 12px;
   padding: 9px 13px;
   border-radius: 8px;
@@ -309,7 +350,7 @@ button {
   padding: 4px 9px;
   border-radius: 20px;
   background: rgba(227, 167, 62, 0.16);
-  color: var(--amber);
+  color: var(--amber-text);
   white-space: nowrap;
 }
 .badge-acerto {
@@ -321,10 +362,83 @@ button {
   color: var(--pink);
   white-space: normal;
 }
+.badge-sem-comprovante {
+  background: rgba(240, 136, 62, 0.16);
+  color: var(--orange);
+  white-space: normal;
+}
+.btn-legado {
+  background: transparent !important;
+  border: 1px solid var(--orange);
+  color: var(--orange) !important;
+  font-weight: 700;
+  padding: 8px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+}
+.btn-legado:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
 .status-planilha-info {
   color: var(--muted);
   font-size: 10.5px;
   margin-top: 3px;
+}
+
+/* ações em lote (operador) */
+.lote-topo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 16px;
+  margin-bottom: 14px;
+}
+.lote-selecionar-todos {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  color: var(--muted);
+  cursor: pointer;
+}
+.lote-barra {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--bg-panel-2);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px 14px;
+  margin-bottom: 14px;
+  font-size: 13px;
+}
+.lote-barra button:not(.link-botao) {
+  background: var(--amber);
+  border: none;
+  color: var(--amber-ink);
+  font-weight: 700;
+  padding: 8px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+}
+.lote-barra button:not(.link-botao):disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.pedido-card-top-esquerda {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.lote-checkbox {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: var(--amber);
+  flex-shrink: 0;
 }
 
 /* cards operador */
@@ -349,7 +463,7 @@ button {
 }
 .pedido-numero {
   font-weight: 800;
-  color: var(--amber);
+  color: var(--amber-text);
 }
 .pedido-cliente {
   font-weight: 700;
@@ -453,7 +567,7 @@ button {
 .erros-import {
   margin: 0;
   padding-left: 18px;
-  color: #ff9d8c;
+  color: var(--red);
   font-size: 12.5px;
   line-height: 1.7;
 }
@@ -715,6 +829,64 @@ button {
   font-size: 13px;
   font-family: inherit;
 }
+.filtro-multiplo {
+  position: relative;
+}
+.filtro-multiplo-botao {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--bg-panel-2);
+  border: 1px solid var(--line);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.filtro-multiplo-seta {
+  font-size: 10px;
+  color: var(--muted);
+}
+.filtro-multiplo-painel {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 25;
+  background: var(--bg-panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 8px;
+  min-width: 220px;
+  max-height: 280px;
+  overflow-y: auto;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+.filtro-multiplo-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  font-size: 13px;
+  color: var(--text);
+  cursor: pointer;
+  border-radius: 6px;
+}
+.filtro-multiplo-item:hover {
+  background: var(--bg-panel-2);
+}
+.filtro-multiplo-limpar {
+  display: block !important;
+  width: 100%;
+  text-align: left !important;
+  padding: 6px 8px !important;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 4px !important;
+  text-decoration: none !important;
+}
+
 .filtros-pedidos {
   display: flex;
   flex-wrap: wrap;

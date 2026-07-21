@@ -3,6 +3,7 @@
 import { useState, FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import ThemeToggle from "@/components/ThemeToggle";
 
 function Logo() {
   return (
@@ -154,6 +155,7 @@ export default function LoginPage() {
 
   return (
     <div className="login-wrap">
+      <ThemeToggle className="tema-flutuante" />
       {modo === "login" ? (
         <FormularioLogin onTrocarSenha={() => setModo("trocarSenha")} />
       ) : (

@@ -15,21 +15,33 @@ type Pedido = {
   statusPlanilha?: string | null;
   canhotoUrl?: string | null;
   comprovantePagamentoUrl?: string | null;
+  finalizadoSemCanhoto?: boolean;
 };
 
 // Só não dá pra anexar canhoto quando o pedido já chegou num desses estados finais.
 const STATUS_SEM_CANHOTO = ["ENTREGUE", "CANCELADO"];
 
-export function BadgeStatus({ status, statusPlanilha }: { status: string; statusPlanilha?: string | null }) {
+export function BadgeStatus({
+  status,
+  statusPlanilha,
+  finalizadoSemCanhoto,
+}: {
+  status: string;
+  statusPlanilha?: string | null;
+  finalizadoSemCanhoto?: boolean;
+}) {
+  const semComprovante = status === "ENTREGUE" && finalizadoSemCanhoto;
+  const classe = semComprovante ? "badge-sem-comprovante" : CLASSE_BADGE[status] ?? "";
+  const rotulo = semComprovante ? "Entregue (sem comprovante)" : LABEL_STATUS[status] ?? status;
   return (
     <span>
-      <span className={`badge ${CLASSE_BADGE[status] ?? ""}`}>{LABEL_STATUS[status] ?? status}</span>
+      <span className={`badge ${classe}`}>{rotulo}</span>
       {statusPlanilha && <div className="status-planilha-info">Planilha: {statusPlanilha}</div>}
     </span>
   );
 }
 
-async function enviarAcao(pedidoId: string, payload: Record<string, any>) {
+export async function enviarAcao(pedidoId: string, payload: Record<string, any>) {
   const res = await fetch(`/api/pedidos/${pedidoId}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
@@ -41,7 +53,15 @@ async function enviarAcao(pedidoId: string, payload: Record<string, any>) {
   }
 }
 
-export default function PedidoAcoes({ pedido, isAdmin = false }: { pedido: Pedido; isAdmin?: boolean }) {
+export default function PedidoAcoes({
+  pedido,
+  isAdmin = false,
+  podeFinalizarLegado = false,
+}: {
+  pedido: Pedido;
+  isAdmin?: boolean;
+  podeFinalizarLegado?: boolean;
+}) {
   const [carregando, setCarregando] = useState(false);
   const [erro, setErro] = useState("");
   const [canhoto, setCanhoto] = useState<File | null>(null);
@@ -111,6 +131,22 @@ export default function PedidoAcoes({ pedido, isAdmin = false }: { pedido: Pedid
     }
   }
 
+  async function finalizarSemComprovante() {
+    const justificativa = window.prompt(
+      'Justificativa (obrigatória) — ex: "Pedido anterior à implantação do sistema":',
+      "Pedido anterior à implantação do sistema"
+    );
+    if (justificativa === null) return;
+    if (!justificativa.trim()) {
+      setErro("Informe uma justificativa pra finalizar sem comprovante.");
+      return;
+    }
+    if (!window.confirm(`Marcar o pedido #${pedido.id} como entregue SEM comprovante? Isso fica registrado permanentemente no histórico.`)) {
+      return;
+    }
+    await acaoSimples({ acao: "finalizarSemComprovante", justificativa: justificativa.trim() });
+  }
+
   const podeAnexarCanhoto = !STATUS_SEM_CANHOTO.includes(pedido.statusEntrega);
   const podeAnexarComprovante = pedido.statusFinanceiro === "AGUARDANDO_ACERTO";
 
@@ -178,6 +214,11 @@ export default function PedidoAcoes({ pedido, isAdmin = false }: { pedido: Pedid
         {linkComprovante}
         {blocoCanhoto}
         {blocoComprovante}
+        {podeFinalizarLegado && podeAnexarCanhoto && (
+          <button className="btn-legado" disabled={carregando} onClick={finalizarSemComprovante}>
+            Marcar como entregue sem comprovante (pedido legado)
+          </button>
+        )}
         {erro && <p className="erro" style={{ marginTop: 6 }}>{erro}</p>}
       </div>
     );

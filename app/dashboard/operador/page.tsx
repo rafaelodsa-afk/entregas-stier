@@ -39,6 +39,7 @@ export default async function OperadorDashboard() {
           statusPlanilha: p.statusPlanilha,
           canhotoUrl: p.canhotoUrl,
           comprovantePagamentoUrl: p.comprovantePagamentoUrl,
+          finalizadoSemCanhoto: p.finalizadoSemCanhoto,
         }))}
       />
     </div>

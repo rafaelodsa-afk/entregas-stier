@@ -87,7 +87,7 @@ export default function AlterarMinhaSenha() {
           </div>
           {erro && <p className="erro">{erro}</p>}
           {sucesso && (
-            <p className="erro" style={{ background: "rgba(63,191,143,0.12)", borderColor: "rgba(63,191,143,0.4)", color: "#8fe3c4" }}>
+            <p className="erro" style={{ background: "rgba(63,191,143,0.12)", borderColor: "rgba(63,191,143,0.4)", color: "var(--teal)" }}>
               Senha alterada com sucesso!
             </p>
           )}

@@ -60,7 +60,7 @@ export default async function DetalhePedidoPage({ params }: { params: { id: stri
 
       <h1 className="page-title">Pedido #{pedido.id}</h1>
       <p className="page-sub" style={{ marginBottom: 20 }}>
-        <BadgeStatus status={pedido.statusEntrega} statusPlanilha={pedido.statusPlanilha} />
+        <BadgeStatus status={pedido.statusEntrega} statusPlanilha={pedido.statusPlanilha} finalizadoSemCanhoto={pedido.finalizadoSemCanhoto} />
       </p>
 
       <div className="form-card">
@@ -81,6 +81,9 @@ export default async function DetalhePedidoPage({ params }: { params: { id: stri
           <div><span className="muted">Acerto confirmado em</span><div>{formatarData(pedido.acertoConfirmadoEm)}</div></div>
           {pedido.observacaoProblema && (
             <div><span className="muted">Observação</span><div>{pedido.observacaoProblema}</div></div>
+          )}
+          {pedido.finalizadoSemCanhoto && (
+            <div><span className="muted">Justificativa (sem comprovante)</span><div>{pedido.justificativaSemCanhoto}</div></div>
           )}
         </div>
 
