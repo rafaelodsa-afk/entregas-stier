@@ -20,34 +20,39 @@ export default async function FinanceiroPage({
   const sessao = token ? await verifySession(token) : null;
   if (!sessao || !podeVerTudo(sessao.papel)) redirect("/dashboard");
 
-  const todosPedidos = await prisma.pedido.findMany();
-  const transportadores = [...new Set(todosPedidos.map((p) => p.transportador))].sort();
-
   const filtroTransportador = searchParams.transportador ?? "";
 
   // Visão antecipada: pedidos já aceitos (ou em rota, ou entregues pela
   // planilha mas sem canhoto real ainda) que VÃO virar pendência financeira
   // quando forem entregues de verdade — só pra planejamento, não mexe no
   // statusFinanceiro real do pedido.
-  const candidatosPrevisto = await prisma.pedido.findMany({
-    where: {
-      statusEntrega: { in: ["AGUARDANDO_CARREGAMENTO", "EM_ROTA", "AGUARDANDO_CANHOTO"] },
-      ...(filtroTransportador ? { transportador: filtroTransportador } : {}),
-    },
-    orderBy: { dataCriacao: "asc" },
-  });
+  const [transportadoresRaw, candidatosPrevisto, aguardandoAcerto, historico] = await Promise.all([
+    // Só o nome do transportador, sem trazer a tabela inteira — usado
+    // apenas pra montar as opções do filtro.
+    prisma.pedido.findMany({ select: { transportador: true }, distinct: ["transportador"] }),
+    prisma.pedido.findMany({
+      where: {
+        statusEntrega: { in: ["AGUARDANDO_CARREGAMENTO", "EM_ROTA", "AGUARDANDO_CANHOTO"] },
+        ...(filtroTransportador ? { transportador: filtroTransportador } : {}),
+      },
+      orderBy: { dataCriacao: "asc" },
+      select: { id: true, cliente: true, transportador: true, formaPagamento: true, statusEntrega: true, valorPedido: true, operacao: true },
+    }),
+    prisma.pedido.findMany({
+      where: { statusFinanceiro: "AGUARDANDO_ACERTO", ...(filtroTransportador ? { transportador: filtroTransportador } : {}) },
+      orderBy: { dataEntrega: "asc" },
+      select: { id: true, cliente: true, transportador: true, formaPagamento: true, valorPedido: true, dataEntrega: true, comprovantePagamentoUrl: true },
+    }),
+    prisma.pedido.findMany({
+      where: { statusFinanceiro: "PAGO", ...(filtroTransportador ? { transportador: filtroTransportador } : {}) },
+      orderBy: { acertoConfirmadoEm: "desc" },
+      take: 50,
+      select: { id: true, cliente: true, transportador: true, valorPedido: true, acertoConfirmadoEm: true, comprovantePagamentoUrl: true },
+    }),
+  ]);
+
+  const transportadores = [...new Set(transportadoresRaw.map((p) => p.transportador))].sort();
   const previstos = candidatosPrevisto.filter((p) => ehOperacaoDeVenda(p.operacao) && ehPagamentoAVista(p.formaPagamento));
-
-  const aguardandoAcerto = await prisma.pedido.findMany({
-    where: { statusFinanceiro: "AGUARDANDO_ACERTO", ...(filtroTransportador ? { transportador: filtroTransportador } : {}) },
-    orderBy: { dataEntrega: "asc" },
-  });
-
-  const historico = await prisma.pedido.findMany({
-    where: { statusFinanceiro: "PAGO", ...(filtroTransportador ? { transportador: filtroTransportador } : {}) },
-    orderBy: { acertoConfirmadoEm: "desc" },
-    take: 50,
-  });
 
   const [aguardandoAcertoComLinks, historicoComLinks] = await Promise.all([
     Promise.all(aguardandoAcerto.map(comLinksAssinados)),

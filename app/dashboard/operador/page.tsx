@@ -16,6 +16,21 @@ export default async function OperadorDashboard() {
   const pedidos = await prisma.pedido.findMany({
     where: { transportador: { equals: (sessao.transportadorNome ?? "___nenhum___").trim(), mode: "insensitive" } },
     orderBy: { dataCriacao: "desc" },
+    select: {
+      id: true,
+      cliente: true,
+      cidade: true,
+      bairro: true,
+      rua: true,
+      numero: true,
+      valorPedido: true,
+      statusEntrega: true,
+      statusFinanceiro: true,
+      statusPlanilha: true,
+      canhotoUrl: true,
+      comprovantePagamentoUrl: true,
+      finalizadoSemCanhoto: true,
+    },
   });
   const pendentes = pedidos.filter((p) => !["ENTREGUE", "CANCELADO", "DEVOLVIDO", "REENTREGA"].includes(p.statusEntrega));
   const pedidosComLinks = await Promise.all(pedidos.map(comLinksAssinados));

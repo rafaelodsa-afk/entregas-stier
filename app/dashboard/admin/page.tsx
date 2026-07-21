@@ -14,7 +14,21 @@ export default async function AdminDashboard() {
   const sessao = token ? await verifySession(token) : null;
   if (!sessao || !podeVerTudo(sessao.papel)) redirect("/login");
 
-  const pedidos = await prisma.pedido.findMany({ orderBy: { dataCriacao: "desc" } });
+  const pedidos = await prisma.pedido.findMany({
+    orderBy: { dataCriacao: "desc" },
+    select: {
+      id: true,
+      cliente: true,
+      transportador: true,
+      statusEntrega: true,
+      statusPlanilha: true,
+      statusFinanceiro: true,
+      valorPedido: true,
+      canhotoUrl: true,
+      comprovantePagamentoUrl: true,
+      finalizadoSemCanhoto: true,
+    },
+  });
   const transportadores = [...new Set(pedidos.map((p) => p.transportador))].sort();
   const pedidosComLinks = await Promise.all(pedidos.map(comLinksAssinados));
 
