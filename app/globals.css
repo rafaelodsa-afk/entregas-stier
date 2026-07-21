@@ -504,6 +504,33 @@ button {
   grid-template-columns: repeat(2, 1fr);
   gap: 14px;
 }
+.confirmacao-exclusao-input {
+  display: block;
+  margin-top: 6px;
+  background: var(--bg-panel-2);
+  border: 1px solid var(--red);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 9px 11px;
+  font-size: 13.5px;
+  font-family: inherit;
+  width: 100%;
+  max-width: 260px;
+}
+.btn-excluir-mes {
+  background: var(--red);
+  border: 1px solid var(--red);
+  color: #fff;
+  border-radius: 8px;
+  padding: 10px 16px;
+  font-size: 13.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.btn-excluir-mes:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
 .detalhe-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);

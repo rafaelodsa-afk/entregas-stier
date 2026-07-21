@@ -1,11 +1,12 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { verifySession, COOKIE_NAME, podeVerTudo } from "@/lib/auth";
+import { verifySession, COOKIE_NAME, podeVerTudo, podeExcluirMes } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { listarTodosOsArquivos } from "@/lib/blobUso";
 import { LIMITE_BANCO_BYTES, LIMITE_BLOB_BYTES } from "@/lib/limitesArmazenamento";
 import GraficoUso from "@/components/GraficoUso";
 import ExportarMes from "@/components/ExportarMes";
+import ExcluirMes from "@/components/ExcluirMes";
 
 export const dynamic = "force-dynamic";
 
@@ -47,6 +48,7 @@ export default async function ArmazenamentoPage() {
   const mesesOrdenados = [...contagemPorMes.keys()].sort();
   const primeiroMes = mesesOrdenados[0];
   const ultimoMes = mesesOrdenados[mesesOrdenados.length - 1];
+  const mesesJaExportados = mesesOrdenados.filter((m) => exportacaoPorMes.has(m));
 
   return (
     <div>
@@ -114,6 +116,8 @@ export default async function ArmazenamentoPage() {
       </div>
 
       <ExportarMes meses={mesesOrdenados} />
+
+      {podeExcluirMes(sessao.papel) && <ExcluirMes mesesExportados={mesesJaExportados} />}
     </div>
   );
 }

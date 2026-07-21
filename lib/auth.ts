@@ -65,3 +65,9 @@ export function podeGerenciarUsuariosPorPapel(papel: SessionPayload["papel"], po
   if (papel === "ADMIN") return podeCriarUsuarios;
   return false;
 }
+
+// Excluir um mês inteiro de pedidos é irreversível e em lote — mais
+// restrito que as outras exclusões do sistema (que incluem ANALISTA).
+export function podeExcluirMes(papel: SessionPayload["papel"]): boolean {
+  return papel === "MASTER" || papel === "ADMIN";
+}
