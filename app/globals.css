@@ -18,6 +18,8 @@
   --violet: #a78bfa;
   --orange: #f0883e;
   --pink: #e35c9e;
+  --cyan: #38b6d4;
+  --marrom: #b08463;
 }
 
 /* Modo claro — mesmo papel semântico de cada variável, tons ajustados
@@ -40,6 +42,8 @@
   --violet: #7440c9;
   --orange: #a04708;
   --pink: #a02f6d;
+  --cyan: #0e6e82;
+  --marrom: #6b4423;
 }
 
 * {
@@ -366,6 +370,30 @@ button {
   background: rgba(240, 136, 62, 0.16);
   color: var(--orange);
   white-space: normal;
+}
+.badge-aguardando-carregamento {
+  background: rgba(56, 182, 212, 0.16);
+  color: var(--cyan);
+}
+.badge-em-rota {
+  background: rgba(78, 143, 227, 0.16);
+  color: var(--blue);
+}
+.badge-entregue {
+  background: rgba(63, 191, 143, 0.16);
+  color: var(--teal);
+}
+.badge-reentrega {
+  background: rgba(167, 139, 250, 0.16);
+  color: var(--violet);
+}
+.badge-cancelado {
+  background: rgba(225, 92, 74, 0.16);
+  color: var(--red);
+}
+.badge-devolvido {
+  background: rgba(176, 132, 99, 0.16);
+  color: var(--marrom);
 }
 .icone-dinheiro {
   display: inline-flex;

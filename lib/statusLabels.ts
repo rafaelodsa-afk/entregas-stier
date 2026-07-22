@@ -13,5 +13,11 @@ export const LABEL_STATUS: Record<string, string> = {
 };
 
 export const CLASSE_BADGE: Record<string, string> = {
+  AGUARDANDO_CARREGAMENTO: "badge-aguardando-carregamento",
+  EM_ROTA: "badge-em-rota",
   AGUARDANDO_CANHOTO: "badge-aguardando-canhoto",
+  ENTREGUE: "badge-entregue",
+  REENTREGA: "badge-reentrega",
+  CANCELADO: "badge-cancelado",
+  DEVOLVIDO: "badge-devolvido",
 };
