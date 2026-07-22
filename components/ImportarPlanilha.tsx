@@ -126,7 +126,11 @@ function mapearLinhas(linhasCru: Record<string, any>[]): LinhaImportada[] {
     const linha: LinhaImportada = { linha: i + 2 }; // +2: cabeçalho ocupa a linha 1
     for (const [chave, valor] of Object.entries(linhaCru)) {
       const campo = MAPA_COLUNAS[normalizarChave(chave)];
-      if (campo) (linha as any)[campo] = valor;
+      // Primeira coluna que bater pra um campo vence — se duas colunas
+      // diferentes normalizarem pro mesmo campo (ex.: uma coincidência de
+      // nome lá pelas últimas colunas da planilha real), a mais à esquerda
+      // (a esperada) não pode ser sobrescrita pela mais à direita.
+      if (campo && (linha as any)[campo] === undefined) (linha as any)[campo] = valor;
     }
     // Nome Fantasia/Apelido tem prioridade — Razão Social só entra quando
     // a primeira vier vazia nessa linha específica.
