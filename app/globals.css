@@ -531,6 +531,19 @@ button {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.canhoto-opcoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.canhoto-arquivo-nome {
+  color: var(--muted);
+  font-size: 12.5px;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .link-canhoto {
   color: var(--blue);
   font-size: 12.5px;

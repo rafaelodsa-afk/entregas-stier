@@ -152,16 +152,28 @@ export default function PedidoAcoes({
 
   const blocoCanhoto = podeAnexarCanhoto ? (
     <div className="canhoto-upload">
-      <label className="canhoto-input-label">
-        {canhoto ? canhoto.name : "Anexar canhoto (foto/PDF)"}
-        <input
-          type="file"
-          accept="image/jpeg,image/png,image/webp,application/pdf"
-          capture="environment"
-          onChange={(e) => setCanhoto(e.target.files?.[0] ?? null)}
-          hidden
-        />
-      </label>
+      <div className="canhoto-opcoes">
+        <label className="canhoto-input-label">
+          Tirar foto
+          <input
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            capture="environment"
+            onChange={(e) => setCanhoto(e.target.files?.[0] ?? null)}
+            hidden
+          />
+        </label>
+        <label className="canhoto-input-label">
+          Escolher da galeria
+          <input
+            type="file"
+            accept="image/jpeg,image/png,image/webp,application/pdf"
+            onChange={(e) => setCanhoto(e.target.files?.[0] ?? null)}
+            hidden
+          />
+        </label>
+      </div>
+      {canhoto && <span className="canhoto-arquivo-nome">{canhoto.name}</span>}
       <button disabled={carregando || !canhoto} onClick={anexarCanhoto}>
         {carregando
           ? "Enviando..."
@@ -174,16 +186,28 @@ export default function PedidoAcoes({
 
   const blocoComprovante = podeAnexarComprovante ? (
     <div className="canhoto-upload">
-      <label className="canhoto-input-label">
-        {comprovante ? comprovante.name : "Anexar comprovante de pagamento"}
-        <input
-          type="file"
-          accept="image/jpeg,image/png,image/webp,application/pdf"
-          capture="environment"
-          onChange={(e) => setComprovante(e.target.files?.[0] ?? null)}
-          hidden
-        />
-      </label>
+      <div className="canhoto-opcoes">
+        <label className="canhoto-input-label">
+          Tirar foto
+          <input
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            capture="environment"
+            onChange={(e) => setComprovante(e.target.files?.[0] ?? null)}
+            hidden
+          />
+        </label>
+        <label className="canhoto-input-label">
+          Escolher da galeria
+          <input
+            type="file"
+            accept="image/jpeg,image/png,image/webp,application/pdf"
+            onChange={(e) => setComprovante(e.target.files?.[0] ?? null)}
+            hidden
+          />
+        </label>
+      </div>
+      {comprovante && <span className="canhoto-arquivo-nome">{comprovante.name}</span>}
       <button disabled={carregando || !comprovante} onClick={anexarComprovante}>
         {carregando ? "Enviando..." : "Anexar comprovante"}
       </button>
