@@ -234,6 +234,11 @@ export default function PedidoAcoes({
             Confirmar acerto
           </button>
         )}
+        {pedido.statusEntrega === "AGUARDANDO_ACEITE" && (
+          <button disabled={carregando} onClick={() => acaoSimples({ acao: "aceitarPeloTransportador" })}>
+            Aceitar pelo transportador
+          </button>
+        )}
         {linkCanhoto}
         {linkComprovante}
         {blocoCanhoto}

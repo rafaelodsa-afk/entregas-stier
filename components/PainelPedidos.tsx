@@ -49,6 +49,7 @@ export default function PainelPedidos({
   const [dataFinal, setDataFinal] = useState("");
   const [selecionados, setSelecionados] = useState<Set<string>>(new Set());
   const [processandoLote, setProcessandoLote] = useState(false);
+  const [processandoAceitar, setProcessandoAceitar] = useState(false);
   const [erroLote, setErroLote] = useState("");
 
   const opcoesTransportador = useMemo(
@@ -71,9 +72,19 @@ export default function PainelPedidos({
   const pendentes = filtrados.filter((p) => !["ENTREGUE", "CANCELADO", "DEVOLVIDO", "REENTREGA"].includes(p.statusEntrega));
   const acerto = filtrados.filter((p) => p.statusFinanceiro === "AGUARDANDO_ACERTO");
 
-  const elegiveisLote = podeFinalizarLegado
+  const elegiveisAceitar = filtrados.filter((p) => p.statusEntrega === "AGUARDANDO_ACEITE");
+  const elegiveisSemComprovante = podeFinalizarLegado
     ? filtrados.filter((p) => !STATUS_SEM_CANHOTO.includes(p.statusEntrega))
     : [];
+  const idsElegiveisAceitar = new Set(elegiveisAceitar.map((p) => p.id));
+  const idsElegiveisSemComprovante = new Set(elegiveisSemComprovante.map((p) => p.id));
+  // União das duas — usada só pra decidir em quais linhas mostrar checkbox
+  // e o "selecionar todos"; cada ação em massa filtra o próprio subconjunto
+  // elegível na hora de agir.
+  const idsElegiveisLote = new Set([...idsElegiveisAceitar, ...idsElegiveisSemComprovante]);
+
+  const algumSelecionadoAceitar = [...selecionados].some((id) => idsElegiveisAceitar.has(id));
+  const algumSelecionadoSemComprovante = podeFinalizarLegado && [...selecionados].some((id) => idsElegiveisSemComprovante.has(id));
 
   function alternarSelecao(id: string) {
     setSelecionados((atual) => {
@@ -85,9 +96,32 @@ export default function PainelPedidos({
   }
 
   function alternarSelecionarTodos() {
-    const ids = elegiveisLote.map((p) => p.id);
+    const ids = [...idsElegiveisLote];
     const todosJaSelecionados = ids.length > 0 && ids.every((id) => selecionados.has(id));
     setSelecionados(todosJaSelecionados ? new Set() : new Set(ids));
+  }
+
+  async function aceitarPeloTransportadorLote() {
+    const ids = [...selecionados].filter((id) => idsElegiveisAceitar.has(id));
+    if (ids.length === 0) return;
+    if (!window.confirm(`Aceitar ${ids.length} pedido(s) em nome do transportador? Move de "Aguardando aceite" pra "Aguardando carregamento".`)) {
+      return;
+    }
+    setProcessandoAceitar(true);
+    setErroLote("");
+    try {
+      const resultados = await Promise.allSettled(
+        ids.map((id) => enviarAcao(id, { acao: "aceitarPeloTransportador" }))
+      );
+      const falhas = resultados.filter((r) => r.status === "rejected").length;
+      if (falhas > 0) {
+        setErroLote(`${falhas} de ${ids.length} pedido(s) não puderam ser aceitos. Tente novamente.`);
+      }
+      setSelecionados(new Set());
+      router.refresh();
+    } finally {
+      setProcessandoAceitar(false);
+    }
   }
 
   async function marcarSemComprovanteLote() {
@@ -100,7 +134,8 @@ export default function PainelPedidos({
       setErroLote("Informe uma justificativa pra finalizar sem comprovante.");
       return;
     }
-    const ids = [...selecionados];
+    const ids = [...selecionados].filter((id) => idsElegiveisSemComprovante.has(id));
+    if (ids.length === 0) return;
     if (!window.confirm(`Marcar ${ids.length} pedido(s) como entregue SEM comprovante? Isso fica registrado permanentemente no histórico de cada um.`)) {
       return;
     }
@@ -153,15 +188,15 @@ export default function PainelPedidos({
         <FiltroPeriodo dataInicial={dataInicial} dataFinal={dataFinal} onChangeInicial={setDataInicial} onChangeFinal={setDataFinal} />
       </div>
 
-      {podeFinalizarLegado && elegiveisLote.length > 0 && (
+      {idsElegiveisLote.size > 0 && (
         <div className="lote-topo">
           <label className="lote-selecionar-todos">
             <input
               type="checkbox"
-              checked={elegiveisLote.every((p) => selecionados.has(p.id))}
+              checked={[...idsElegiveisLote].every((id) => selecionados.has(id))}
               onChange={alternarSelecionarTodos}
             />
-            Selecionar todos os elegíveis ({elegiveisLote.length})
+            Selecionar todos os elegíveis ({idsElegiveisLote.size})
           </label>
         </div>
       )}
@@ -169,9 +204,16 @@ export default function PainelPedidos({
       {selecionados.size > 0 && (
         <div className="lote-barra">
           <span>{selecionados.size} selecionado(s)</span>
-          <button disabled={processandoLote} onClick={marcarSemComprovanteLote}>
-            {processandoLote ? "Processando..." : `Marcar como entregue sem comprovante (${selecionados.size})`}
-          </button>
+          {algumSelecionadoAceitar && (
+            <button disabled={processandoAceitar} onClick={aceitarPeloTransportadorLote}>
+              {processandoAceitar ? "Processando..." : `Aceitar pelo transportador (${[...selecionados].filter((id) => idsElegiveisAceitar.has(id)).length})`}
+            </button>
+          )}
+          {algumSelecionadoSemComprovante && (
+            <button disabled={processandoLote} onClick={marcarSemComprovanteLote}>
+              {processandoLote ? "Processando..." : `Marcar como entregue sem comprovante (${[...selecionados].filter((id) => idsElegiveisSemComprovante.has(id)).length})`}
+            </button>
+          )}
           <button className="link-botao" onClick={() => setSelecionados(new Set())}>
             Limpar seleção
           </button>
@@ -182,6 +224,7 @@ export default function PainelPedidos({
       <TabelaPedidos
         pedidos={filtrados}
         podeFinalizarLegado={podeFinalizarLegado}
+        idsElegiveisLote={idsElegiveisLote}
         selecionados={selecionados}
         onAlternarSelecao={alternarSelecao}
       />

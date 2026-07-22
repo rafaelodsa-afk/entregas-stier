@@ -123,6 +123,19 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       data.acertoConfirmadoEm = new Date();
       break;
     }
+    case "aceitarPeloTransportador": {
+      // Admin/analista aceita em nome do transportador — mesma permissão
+      // de quem pode alterar status manualmente.
+      if (!podeVerTudo(papel)) {
+        return NextResponse.json({ erro: "Sem permissão" }, { status: 403 });
+      }
+      if (pedido.statusEntrega !== "AGUARDANDO_ACEITE") {
+        return NextResponse.json({ erro: "Pedido não está aguardando aceite" }, { status: 400 });
+      }
+      data.statusEntrega = "AGUARDANDO_CARREGAMENTO";
+      statusParaHistorico = `AGUARDANDO_CARREGAMENTO (aceito por ${nomeUsuario} no lugar do transportador)`;
+      break;
+    }
     case "alterarStatusManual": {
       // ajuste administrativo direto — só quem enxerga tudo pode fazer
       if (!podeVerTudo(papel)) {

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import PedidoAcoes, { BadgeStatus, STATUS_SEM_CANHOTO } from "@/components/PedidoAcoes";
+import PedidoAcoes, { BadgeStatus } from "@/components/PedidoAcoes";
 import IconeDinheiro from "@/components/IconeDinheiro";
 
 type Pedido = {
@@ -26,11 +26,13 @@ type Pedido = {
 export default function TabelaPedidos({
   pedidos,
   podeFinalizarLegado = false,
+  idsElegiveisLote,
   selecionados,
   onAlternarSelecao,
 }: {
   pedidos: Pedido[];
   podeFinalizarLegado?: boolean;
+  idsElegiveisLote?: Set<string>;
   selecionados?: Set<string>;
   onAlternarSelecao?: (id: string) => void;
 }) {
@@ -67,7 +69,7 @@ export default function TabelaPedidos({
       <table className="pedidos-table">
         <thead>
           <tr>
-            {podeFinalizarLegado && <th></th>}
+            {idsElegiveisLote && <th></th>}
             <th>Nº</th>
             <th>Cliente</th>
             <th>Transportador</th>
@@ -79,10 +81,10 @@ export default function TabelaPedidos({
         </thead>
         <tbody>
           {pedidos.map((p) => {
-            const elegivelLote = podeFinalizarLegado && !STATUS_SEM_CANHOTO.includes(p.statusEntrega);
+            const elegivelLote = idsElegiveisLote?.has(p.id) ?? false;
             return (
               <tr key={p.id}>
-                {podeFinalizarLegado && (
+                {idsElegiveisLote && (
                   <td>
                     {elegivelLote && (
                       <input
@@ -117,7 +119,7 @@ export default function TabelaPedidos({
           })}
           {pedidos.length === 0 && (
             <tr>
-              <td colSpan={podeFinalizarLegado ? 8 : 7} className="muted" style={{ textAlign: "center", padding: 20 }}>
+              <td colSpan={idsElegiveisLote ? 8 : 7} className="muted" style={{ textAlign: "center", padding: 20 }}>
                 Nenhum pedido encontrado.
               </td>
             </tr>
