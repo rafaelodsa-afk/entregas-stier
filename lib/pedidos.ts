@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { LABEL_STATUS } from "@/lib/statusLabels";
 
 export type LinhaPedido = {
   id?: unknown;
@@ -392,13 +393,11 @@ export async function processarImportacao(
       continue;
     }
 
-    // f) Planilha diz "Entregue" — vira Aguardando canhoto (a não ser que já esteja lá).
-    if (statusPlanilha === "ENTREGUE") {
-      if (existente.statusEntrega === "AGUARDANDO_CANHOTO") {
-        if (gravar) await atualizarSomenteStatusPlanilha(id, statusPlanilhaTexto);
-        resultados.push({ linha: linha.linha, id, classificacao: "sem_mudanca_operacional" });
-        continue;
-      }
+    // f) Planilha diz "Entregue" — só vale se ninguém ainda deu aceite no
+    // site (status atual ainda é Aguardando aceite). Uma vez aceito, o
+    // sinal "Entregue" da planilha não pode mais pular o fluxo real de
+    // entrega (canhoto) — isso é decidido em g) logo abaixo.
+    if (statusPlanilha === "ENTREGUE" && existente.statusEntrega === "AGUARDANDO_ACEITE") {
       if (gravar) {
         await prisma.pedido.update({
           where: { id },
@@ -412,6 +411,20 @@ export async function processarImportacao(
         });
       }
       resultados.push({ linha: linha.linha, id, classificacao: "aguardando_canhoto" });
+      continue;
+    }
+
+    // g) Planilha diz "Entregue", mas o pedido já saiu de Aguardando aceite
+    // no site (alguém já deu aceite) — ignora o sinal da planilha e mantém
+    // o status atual, só atualizando o campo informativo.
+    if (statusPlanilha === "ENTREGUE") {
+      if (gravar) await atualizarSomenteStatusPlanilha(id, statusPlanilhaTexto);
+      resultados.push({
+        linha: linha.linha,
+        id,
+        classificacao: "protegido",
+        motivo: `Pedido já foi aceito no site (status atual: ${LABEL_STATUS[existente.statusEntrega] ?? existente.statusEntrega}) — sinal de "Entregue" da planilha ignorado`,
+      });
       continue;
     }
 
