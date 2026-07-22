@@ -143,19 +143,29 @@ export async function criarOuReatribuirPedido(linha: LinhaPedido, nomeUsuario: s
   return { ok: true as const, pedido, criado: false };
 }
 
+// Textos reconhecidos pra cada status, já normalizados (sem acento,
+// minúsculo, sem hífen/underscore, espaços internos colapsados). Igualdade
+// exata, não "contém" — um valor como "A ENTREGAR" (ainda não entregue)
+// não pode ser confundido com "Entregue" só por compartilhar a substring
+// "entreg".
+const TEXTOS_REENTREGA = new Set(["reentrega"]);
+const TEXTOS_CANCELADO = new Set(["cancelado", "cancelada"]);
+const TEXTOS_ENTREGUE = new Set(["entregue", "entregue com sucesso"]);
+
 // Reconhece o texto solto que veio na coluna opcional "Status de entrega" da
-// planilha. A ordem dos "includes" importa: "reentrega" contém a substring
-// "entreg", então precisa ser testada antes.
+// planilha.
 function interpretarStatusPlanilha(valorCru: unknown): "ENTREGUE" | "CANCELADO" | "REENTREGA" | null {
   const texto = String(valorCru ?? "")
     .normalize("NFD")
     .replace(new RegExp(String.fromCharCode(0x5b) + "\\u0300-\\u036f" + String.fromCharCode(0x5d), "g"), "")
     .toLowerCase()
+    .replace(/[-_]/g, " ")
+    .replace(/\s+/g, " ")
     .trim();
   if (!texto) return null;
-  if (texto.includes("reentreg")) return "REENTREGA";
-  if (texto.includes("cancel")) return "CANCELADO";
-  if (texto.includes("entreg")) return "ENTREGUE";
+  if (TEXTOS_REENTREGA.has(texto)) return "REENTREGA";
+  if (TEXTOS_CANCELADO.has(texto)) return "CANCELADO";
+  if (TEXTOS_ENTREGUE.has(texto)) return "ENTREGUE";
   return null;
 }
 

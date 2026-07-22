@@ -83,7 +83,6 @@ const MAPA_COLUNAS: Record<string, string> = {
   data: "dataPedido",
   datadopedido: "dataPedido",
   statusdeentrega: "statusEntregaPlanilha",
-  status: "statusEntregaPlanilha",
   preventrega: "dataPrevistaEntrega",
   previsaodeentrega: "dataPrevistaEntrega",
   previsaoentrega: "dataPrevistaEntrega",
