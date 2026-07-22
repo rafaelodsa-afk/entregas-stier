@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import PedidoAcoes, { BadgeStatus } from "@/components/PedidoAcoes";
+import PedidoAcoes, { BadgeStatus, STATUS_SEM_CANHOTO } from "@/components/PedidoAcoes";
 import IconeDinheiro from "@/components/IconeDinheiro";
 
 type Pedido = {
@@ -23,7 +23,17 @@ type Pedido = {
 // Componente só de apresentação — recebe a lista já filtrada (busca +
 // status + transportador ficam no PainelPedidos, que fica em volta desta
 // tabela e também mostra os KPIs).
-export default function TabelaPedidos({ pedidos, podeFinalizarLegado = false }: { pedidos: Pedido[]; podeFinalizarLegado?: boolean }) {
+export default function TabelaPedidos({
+  pedidos,
+  podeFinalizarLegado = false,
+  selecionados,
+  onAlternarSelecao,
+}: {
+  pedidos: Pedido[];
+  podeFinalizarLegado?: boolean;
+  selecionados?: Set<string>;
+  onAlternarSelecao?: (id: string) => void;
+}) {
   const [excluindoId, setExcluindoId] = useState<string | null>(null);
   const [erro, setErro] = useState("");
   const router = useRouter();
@@ -57,6 +67,7 @@ export default function TabelaPedidos({ pedidos, podeFinalizarLegado = false }: 
       <table className="pedidos-table">
         <thead>
           <tr>
+            {podeFinalizarLegado && <th></th>}
             <th>Nº</th>
             <th>Cliente</th>
             <th>Transportador</th>
@@ -67,30 +78,46 @@ export default function TabelaPedidos({ pedidos, podeFinalizarLegado = false }: 
           </tr>
         </thead>
         <tbody>
-          {pedidos.map((p) => (
-            <tr key={p.id}>
-              <td><Link className="link-canhoto" href={`/dashboard/admin/pedidos/${p.id}`}>#{p.id}</Link></td>
-              <td>{p.cliente}</td>
-              <td>{p.transportador}</td>
-              <td>
-                <BadgeStatus status={p.statusEntrega} statusPlanilha={p.statusPlanilha} finalizadoSemCanhoto={p.finalizadoSemCanhoto} />
-                {p.mostraIconeDinheiro && <IconeDinheiro />}
-              </td>
-              <td>{p.statusFinanceiro === "AGUARDANDO_ACERTO" ? <span className="badge badge-acerto">Aguardando acerto</span> : "—"}</td>
-              <td>{p.valorPedido.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</td>
-              <td>
-                <div className="acoes-linha">
-                  <PedidoAcoes pedido={p} isAdmin podeFinalizarLegado={podeFinalizarLegado} />
-                  <button className="btn-excluir" disabled={excluindoId === p.id} onClick={() => excluir(p.id)}>
-                    {excluindoId === p.id ? "..." : "Excluir"}
-                  </button>
-                </div>
-              </td>
-            </tr>
-          ))}
+          {pedidos.map((p) => {
+            const elegivelLote = podeFinalizarLegado && !STATUS_SEM_CANHOTO.includes(p.statusEntrega);
+            return (
+              <tr key={p.id}>
+                {podeFinalizarLegado && (
+                  <td>
+                    {elegivelLote && (
+                      <input
+                        type="checkbox"
+                        className="lote-checkbox"
+                        checked={selecionados?.has(p.id) ?? false}
+                        onChange={() => onAlternarSelecao?.(p.id)}
+                        aria-label={`Selecionar pedido #${p.id}`}
+                      />
+                    )}
+                  </td>
+                )}
+                <td><Link className="link-canhoto" href={`/dashboard/admin/pedidos/${p.id}`}>#{p.id}</Link></td>
+                <td>{p.cliente}</td>
+                <td>{p.transportador}</td>
+                <td>
+                  <BadgeStatus status={p.statusEntrega} statusPlanilha={p.statusPlanilha} finalizadoSemCanhoto={p.finalizadoSemCanhoto} />
+                  {p.mostraIconeDinheiro && <IconeDinheiro />}
+                </td>
+                <td>{p.statusFinanceiro === "AGUARDANDO_ACERTO" ? <span className="badge badge-acerto">Aguardando acerto</span> : "—"}</td>
+                <td>{p.valorPedido.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</td>
+                <td>
+                  <div className="acoes-linha">
+                    <PedidoAcoes pedido={p} isAdmin podeFinalizarLegado={podeFinalizarLegado} />
+                    <button className="btn-excluir" disabled={excluindoId === p.id} onClick={() => excluir(p.id)}>
+                      {excluindoId === p.id ? "..." : "Excluir"}
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            );
+          })}
           {pedidos.length === 0 && (
             <tr>
-              <td colSpan={7} className="muted" style={{ textAlign: "center", padding: 20 }}>
+              <td colSpan={podeFinalizarLegado ? 8 : 7} className="muted" style={{ textAlign: "center", padding: 20 }}>
                 Nenhum pedido encontrado.
               </td>
             </tr>

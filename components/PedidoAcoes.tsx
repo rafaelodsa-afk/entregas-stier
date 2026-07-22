@@ -19,7 +19,7 @@ type Pedido = {
 };
 
 // Só não dá pra anexar canhoto quando o pedido já chegou num desses estados finais.
-const STATUS_SEM_CANHOTO = ["ENTREGUE", "CANCELADO"];
+export const STATUS_SEM_CANHOTO = ["ENTREGUE", "CANCELADO"];
 
 export function BadgeStatus({
   status,
