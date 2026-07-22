@@ -12,6 +12,7 @@ export type LinhaPedido = {
   formaPagamento?: unknown;
   valorPedido?: unknown;
   prazo?: unknown;
+  dataPedido?: unknown;
   dataPrevistaEntrega?: unknown;
 };
 
@@ -103,6 +104,7 @@ export async function criarOuReatribuirPedido(linha: LinhaPedido, nomeUsuario: s
     formaPagamento: String(linha.formaPagamento ?? "BOLETO").trim().toUpperCase(),
     valorPedido: Number(linha.valorPedido) || 0,
     prazo: String(linha.prazo ?? "").trim(),
+    dataPedido: parseDataPrevista(linha.dataPedido),
     dataPrevistaEntrega: parseDataPrevista(linha.dataPrevistaEntrega),
   };
 
@@ -192,6 +194,7 @@ function montarDados(linha: LinhaImportada, cliente: string, transportador: stri
     formaPagamento: String(linha.formaPagamento ?? "BOLETO").trim().toUpperCase(),
     valorPedido: Number(linha.valorPedido) || 0,
     prazo: String(linha.prazo ?? "").trim(),
+    dataPedido: parseDataPrevista(linha.dataPedido),
     dataPrevistaEntrega: parseDataPrevista(linha.dataPrevistaEntrega),
   };
 }

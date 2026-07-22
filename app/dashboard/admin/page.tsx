@@ -30,6 +30,7 @@ export default async function AdminDashboard() {
       finalizadoSemCanhoto: true,
       operacao: true,
       formaPagamento: true,
+      dataPedido: true,
     },
   });
   const transportadores = [...new Set(pedidos.map((p) => p.transportador))].sort();
@@ -52,6 +53,7 @@ export default async function AdminDashboard() {
           comprovantePagamentoUrl: p.comprovantePagamentoUrl,
           finalizadoSemCanhoto: p.finalizadoSemCanhoto,
           mostraIconeDinheiro: geraPendenciaFinanceira(p.operacao, p.formaPagamento),
+          dataPedido: p.dataPedido,
         }))}
       >
         <ImportarPlanilha />

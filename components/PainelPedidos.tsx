@@ -3,7 +3,9 @@
 import { useMemo, useState } from "react";
 import TabelaPedidos from "@/components/TabelaPedidos";
 import FiltroMultiplo from "@/components/FiltroMultiplo";
+import FiltroPeriodo from "@/components/FiltroPeriodo";
 import { LABEL_STATUS } from "@/lib/statusLabels";
+import { dataNoIntervalo } from "@/lib/filtroPeriodo";
 
 type Pedido = {
   id: string;
@@ -17,6 +19,7 @@ type Pedido = {
   comprovantePagamentoUrl: string | null;
   finalizadoSemCanhoto: boolean;
   mostraIconeDinheiro: boolean;
+  dataPedido: Date | null;
 };
 
 const OPCOES_STATUS = Object.entries(LABEL_STATUS).map(([valor, rotulo]) => ({ valor, rotulo }));
@@ -35,6 +38,8 @@ export default function PainelPedidos({
   const [busca, setBusca] = useState("");
   const [statusFiltro, setStatusFiltro] = useState<Set<string>>(new Set());
   const [transportadorFiltro, setTransportadorFiltro] = useState<Set<string>>(new Set());
+  const [dataInicial, setDataInicial] = useState("");
+  const [dataFinal, setDataFinal] = useState("");
 
   const opcoesTransportador = useMemo(
     () => transportadores.map((t) => ({ valor: t, rotulo: t })),
@@ -45,6 +50,7 @@ export default function PainelPedidos({
   const filtrados = pedidos.filter((p) => {
     if (statusFiltro.size > 0 && !statusFiltro.has(p.statusEntrega)) return false;
     if (transportadorFiltro.size > 0 && !transportadorFiltro.has(p.transportador)) return false;
+    if (!dataNoIntervalo(p.dataPedido, dataInicial, dataFinal)) return false;
     if (buscaNormalizada) {
       const alvo = `${p.id} ${p.cliente}`.toLowerCase();
       if (!alvo.includes(buscaNormalizada)) return false;
@@ -84,6 +90,7 @@ export default function PainelPedidos({
         />
         <FiltroMultiplo rotulo="Status" opcoes={OPCOES_STATUS} selecionados={statusFiltro} onChange={setStatusFiltro} />
         <FiltroMultiplo rotulo="Transportadores" opcoes={opcoesTransportador} selecionados={transportadorFiltro} onChange={setTransportadorFiltro} />
+        <FiltroPeriodo dataInicial={dataInicial} dataFinal={dataFinal} onChangeInicial={setDataInicial} onChangeFinal={setDataFinal} />
       </div>
 
       <TabelaPedidos pedidos={filtrados} podeFinalizarLegado={podeFinalizarLegado} />

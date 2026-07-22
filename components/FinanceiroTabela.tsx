@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { comprimirImagem } from "@/lib/comprimirImagem";
 import { enviarArquivoParaR2 } from "@/lib/uploadR2Client";
+import { formatarDataPura } from "@/lib/formatarData";
 
 type PedidoAberto = {
   id: string;
@@ -11,6 +12,7 @@ type PedidoAberto = {
   transportador: string;
   formaPagamento: string;
   valorPedido: number;
+  dataPedido: Date | null;
   dataEntrega: Date | null;
   comprovantePagamentoUrl: string | null;
 };
@@ -119,6 +121,7 @@ export default function FinanceiroTabela({ pedidos }: { pedidos: PedidoAberto[] 
               <th>Cliente</th>
               <th>Transportador</th>
               <th>Pagamento</th>
+              <th>Data do pedido</th>
               <th>Entregue em</th>
               <th>Valor</th>
               <th>Comprovante</th>
@@ -132,6 +135,7 @@ export default function FinanceiroTabela({ pedidos }: { pedidos: PedidoAberto[] 
                 <td>{p.cliente}</td>
                 <td>{p.transportador}</td>
                 <td>{LABEL_PAGAMENTO[p.formaPagamento] ?? p.formaPagamento}</td>
+                <td>{formatarDataPura(p.dataPedido)}</td>
                 <td>{formatarData(p.dataEntrega)}</td>
                 <td>{formatarValor(p.valorPedido)}</td>
                 <td>

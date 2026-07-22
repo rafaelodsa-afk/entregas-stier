@@ -857,6 +857,25 @@ button {
   font-size: 13px;
   font-family: inherit;
 }
+.filtro-periodo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.filtro-periodo-input {
+  background: var(--bg-panel-2);
+  border: 1px solid var(--line);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 13px;
+  font-family: inherit;
+}
+.filtro-periodo-separador {
+  color: var(--muted);
+  font-size: 12.5px;
+}
+
 .filtro-multiplo {
   position: relative;
 }

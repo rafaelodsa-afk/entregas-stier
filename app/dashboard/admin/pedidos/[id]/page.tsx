@@ -73,6 +73,7 @@ export default async function DetalhePedidoPage({ params }: { params: { id: stri
           <div><span className="muted">Forma de pagamento</span><div>{LABEL_PAGAMENTO[pedido.formaPagamento] ?? pedido.formaPagamento}</div></div>
           <div><span className="muted">Valor</span><div>{Number(pedido.valorPedido).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</div></div>
           <div><span className="muted">Prazo</span><div>{pedido.prazo || "—"}</div></div>
+          <div><span className="muted">Data do pedido</span><div>{formatarDataPura(pedido.dataPedido)}</div></div>
           <div><span className="muted">Data prevista de entrega</span><div>{formatarDataPura(pedido.dataPrevistaEntrega)}</div></div>
           <div><span className="muted">Status na planilha</span><div>{pedido.statusPlanilha || "—"}</div></div>
           <div><span className="muted">Status financeiro</span><div>{LABEL_FINANCEIRO[pedido.statusFinanceiro] ?? pedido.statusFinanceiro}</div></div>

@@ -17,6 +17,7 @@ type LinhaImportada = {
   valorPedido?: unknown;
   prazo?: unknown;
   statusEntregaPlanilha?: unknown;
+  dataPedido?: unknown;
   dataPrevistaEntrega?: unknown;
 };
 
@@ -43,15 +44,25 @@ function normalizarChave(chave: string) {
 // Aceita variações comuns de como a planilha real da Stier (e outras) nomeia
 // essas colunas — ignorando acentuação, maiúsculas e pequenas diferenças de
 // redação.
+// Cliente tem duas colunas possíveis na planilha real — Nome Fantasia/
+// Apelido é o nome preferido (mais reconhecível no dia a dia), com Razão
+// Social como alternativa só quando a primeira vier vazia numa linha. Por
+// isso os dois têm campos próprios aqui (clienteNomeFantasia/
+// clienteRazaoSocial) — são resolvidos num "cliente" só depois de mapear
+// todas as colunas, em resolverCliente().
 const MAPA_COLUNAS: Record<string, string> = {
   npedido: "id",
   numeropedido: "id",
   nrpedido: "id",
   pedido: "id",
   id: "id",
-  cliente: "cliente",
-  clienterazaosocialnome: "cliente",
-  razaosocial: "cliente",
+  cliente: "clienteRazaoSocial",
+  clienterazaosocialnome: "clienteRazaoSocial",
+  razaosocial: "clienteRazaoSocial",
+  clientenomefantasiaapelido: "clienteNomeFantasia",
+  nomefantasiaapelido: "clienteNomeFantasia",
+  nomefantasia: "clienteNomeFantasia",
+  apelido: "clienteNomeFantasia",
   cidade: "cidade",
   bairro: "bairro",
   rua: "rua",
@@ -69,6 +80,8 @@ const MAPA_COLUNAS: Record<string, string> = {
   valordopedido: "valorPedido",
   valorpedido: "valorPedido",
   prazo: "prazo",
+  data: "dataPedido",
+  datadopedido: "dataPedido",
   statusdeentrega: "statusEntregaPlanilha",
   status: "statusEntregaPlanilha",
   preventrega: "dataPrevistaEntrega",
@@ -115,6 +128,13 @@ function mapearLinhas(linhasCru: Record<string, any>[]): LinhaImportada[] {
       const campo = MAPA_COLUNAS[normalizarChave(chave)];
       if (campo) (linha as any)[campo] = valor;
     }
+    // Nome Fantasia/Apelido tem prioridade — Razão Social só entra quando
+    // a primeira vier vazia nessa linha específica.
+    const nomeFantasia = String((linha as any).clienteNomeFantasia ?? "").trim();
+    const razaoSocial = String((linha as any).clienteRazaoSocial ?? "").trim();
+    linha.cliente = nomeFantasia || razaoSocial;
+    delete (linha as any).clienteNomeFantasia;
+    delete (linha as any).clienteRazaoSocial;
     return linha;
   });
 }
@@ -201,9 +221,10 @@ export default function ImportarPlanilha() {
     <div className="form-card">
       <h2>Importar pedidos por planilha</h2>
       <p className="page-sub" style={{ marginBottom: 12 }}>
-        Envie um arquivo .xlsx ou .csv com as colunas: Nº Pedido, Cliente, Cidade, Bairro, Rua, Número,
-        Transportador, Operação, Forma de Pagamento, Valor, Prazo (e, se quiser, Status de entrega e Prev.
-        Entrega).{" "}
+        Envie um arquivo .xlsx ou .csv com as colunas: Nº Pedido, Cliente (Razão Social/Nome e/ou Nome
+        Fantasia/Apelido — o Nome Fantasia tem prioridade quando os dois vierem preenchidos), Cidade, Bairro,
+        Rua, Número, Transportador, Operação, Forma de Pagamento, Valor, Prazo (e, se quiser, Data, Status de
+        entrega e Prev. Entrega).{" "}
         <a className="link-canhoto" href="/modelo-pedidos.csv" download>
           Baixar planilha modelo
         </a>

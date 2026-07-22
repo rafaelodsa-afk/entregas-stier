@@ -15,6 +15,7 @@ const VAZIO = {
   formaPagamento: "BOLETO",
   valorPedido: "",
   prazo: "",
+  dataPedido: "",
   dataPrevistaEntrega: "",
 };
 
@@ -123,6 +124,14 @@ export default function CriarPedido() {
         <label>
           Prazo
           <input value={form.prazo} onChange={(e) => setForm({ ...form, prazo: e.target.value })} placeholder="Ex.: 2 dias" />
+        </label>
+        <label>
+          Data do pedido
+          <input
+            type="date"
+            value={form.dataPedido}
+            onChange={(e) => setForm({ ...form, dataPedido: e.target.value })}
+          />
         </label>
         <label>
           Data prevista de entrega

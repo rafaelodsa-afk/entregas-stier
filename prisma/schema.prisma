@@ -68,6 +68,7 @@ model Pedido {
   formaPagamento     String            @default("BOLETO")
   valorPedido        Decimal           @default(0) @db.Decimal(12, 2)
   prazo              String            @default("")
+  dataPedido         DateTime? // data do pedido em si (coluna "DATA" da planilha) — diferente da data prevista de entrega
   dataPrevistaEntrega DateTime?
   statusEntrega      StatusEntrega     @default(AGUARDANDO_ACEITE)
   statusPlanilha     String? // último status reportado pela planilha, só informativo — nunca decide o statusEntrega sozinho
@@ -80,6 +81,10 @@ model Pedido {
   dataCriacao        DateTime          @default(now())
   dataEntrega        DateTime?
   acertoConfirmadoEm DateTime?
+  // Quando o pedido entrou em Reentrega — limpo (volta a null) assim que
+  // é reatribuído ou tem o status alterado manualmente. Usado só pra
+  // saber há quanto tempo está parado, não é histórico completo.
+  dataReentrega      DateTime?
   // Pedido antigo (anterior ao sistema), marcado como entregue por um
   // admin/master sem canhoto anexado — permanente, nunca voltar a false.
   finalizadoSemCanhoto     Boolean @default(false)

@@ -1,3 +1,5 @@
+import { formatarDataPura } from "@/lib/formatarData";
+
 type PedidoPrevisto = {
   id: string;
   cliente: string;
@@ -5,6 +7,7 @@ type PedidoPrevisto = {
   formaPagamento: string;
   statusEntrega: string;
   valorPedido: number;
+  dataPedido: Date | null;
 };
 
 const LABEL_PAGAMENTO: Record<string, string> = {
@@ -45,6 +48,7 @@ export default function FinanceiroPrevisto({ pedidos }: { pedidos: PedidoPrevist
               <th>Transportador</th>
               <th>Pagamento</th>
               <th>Status</th>
+              <th>Data do pedido</th>
               <th>Valor</th>
               <th>Observação</th>
             </tr>
@@ -57,6 +61,7 @@ export default function FinanceiroPrevisto({ pedidos }: { pedidos: PedidoPrevist
                 <td>{p.transportador}</td>
                 <td>{LABEL_PAGAMENTO[p.formaPagamento] ?? p.formaPagamento}</td>
                 <td>{LABEL_STATUS_ENTREGA[p.statusEntrega] ?? p.statusEntrega}</td>
+                <td>{formatarDataPura(p.dataPedido)}</td>
                 <td>{formatarValor(p.valorPedido)}</td>
                 <td className="muted">Ainda não entregue</td>
               </tr>
