@@ -10,7 +10,7 @@ import PainelPedidos from "@/components/PainelPedidos";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminDashboard() {
+export default async function AdminDashboard({ searchParams }: { searchParams: { status?: string } }) {
   const token = cookies().get(COOKIE_NAME)?.value;
   const sessao = token ? await verifySession(token) : null;
   if (!sessao || !podeVerTudo(sessao.papel)) redirect("/login");
@@ -39,8 +39,10 @@ export default async function AdminDashboard() {
   return (
     <div>
       <PainelPedidos
+        key={searchParams.status ?? "todos"}
         transportadores={transportadores}
         podeFinalizarLegado={podeFinalizarSemCanhoto(sessao.papel)}
+        statusInicial={searchParams.status}
         pedidos={pedidosComLinks.map((p) => ({
           id: p.id,
           cliente: p.cliente,

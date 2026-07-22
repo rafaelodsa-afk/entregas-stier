@@ -279,6 +279,24 @@ button {
   color: var(--amber-text);
   border-bottom-color: var(--amber-text);
 }
+.alerta-reentrega {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(240, 136, 62, 0.12);
+  border: 1px solid rgba(240, 136, 62, 0.35);
+  color: var(--orange);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 10px 14px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  text-decoration: none;
+  cursor: pointer;
+}
+.alerta-reentrega:hover {
+  background: rgba(240, 136, 62, 0.2);
+}
 .somente-leitura-aviso {
   display: flex;
   align-items: center;

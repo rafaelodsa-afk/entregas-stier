@@ -131,7 +131,7 @@ export async function criarOuReatribuirPedido(linha: LinhaPedido, nomeUsuario: s
 
   const pedido = await prisma.pedido.update({
     where: { id },
-    data: { ...dados, statusEntrega: "AGUARDANDO_ACEITE", statusFinanceiro: "NA", dataEntrega: null, observacaoProblema: null },
+    data: { ...dados, statusEntrega: "AGUARDANDO_ACEITE", statusFinanceiro: "NA", dataEntrega: null, observacaoProblema: null, dataReentrega: null },
   });
   await prisma.historicoPedido.create({
     data: {
@@ -215,6 +215,7 @@ async function reatribuirPedido(
       statusFinanceiro: "NA",
       dataEntrega: null,
       observacaoProblema: null,
+      dataReentrega: null,
     },
   });
   await prisma.historicoPedido.create({

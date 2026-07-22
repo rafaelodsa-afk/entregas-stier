@@ -30,16 +30,20 @@ export default function PainelPedidos({
   pedidos,
   transportadores,
   podeFinalizarLegado = false,
+  statusInicial,
   children,
 }: {
   pedidos: Pedido[];
   transportadores: string[];
   podeFinalizarLegado?: boolean;
+  statusInicial?: string;
   children?: React.ReactNode;
 }) {
   const router = useRouter();
   const [busca, setBusca] = useState("");
-  const [statusFiltro, setStatusFiltro] = useState<Set<string>>(new Set());
+  const [statusFiltro, setStatusFiltro] = useState<Set<string>>(
+    () => new Set(statusInicial && statusInicial in LABEL_STATUS ? [statusInicial] : [])
+  );
   const [transportadorFiltro, setTransportadorFiltro] = useState<Set<string>>(new Set());
   const [dataInicial, setDataInicial] = useState("");
   const [dataFinal, setDataFinal] = useState("");

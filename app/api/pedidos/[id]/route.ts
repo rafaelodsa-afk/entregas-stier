@@ -139,6 +139,16 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       return NextResponse.json({ erro: "Ação desconhecida" }, { status: 400 });
   }
 
+  // Marca quando o pedido entrou em Reentrega (pra saber há quanto tempo
+  // está parado) e limpa assim que sai desse status, seja qual for a ação.
+  if (data.statusEntrega && data.statusEntrega !== pedido.statusEntrega) {
+    if (data.statusEntrega === "REENTREGA") {
+      data.dataReentrega = new Date();
+    } else if (pedido.statusEntrega === "REENTREGA") {
+      data.dataReentrega = null;
+    }
+  }
+
   const atualizado = await prisma.pedido.update({ where: { id: params.id }, data });
   await prisma.historicoPedido.create({
     data: { pedidoId: params.id, status: statusParaHistorico, usuario: nomeUsuario },
