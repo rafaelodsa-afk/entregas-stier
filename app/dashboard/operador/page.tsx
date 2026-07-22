@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { verifySession, COOKIE_NAME } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { comLinksAssinados } from "@/lib/r2";
+import { geraPendenciaFinanceira } from "@/lib/pedidos";
 import ListaPedidosOperador from "@/components/ListaPedidosOperador";
 
 export const dynamic = "force-dynamic";
@@ -30,6 +31,8 @@ export default async function OperadorDashboard() {
       canhotoUrl: true,
       comprovantePagamentoUrl: true,
       finalizadoSemCanhoto: true,
+      operacao: true,
+      formaPagamento: true,
     },
   });
   const pendentes = pedidos.filter((p) => !["ENTREGUE", "CANCELADO", "DEVOLVIDO", "REENTREGA"].includes(p.statusEntrega));
@@ -55,6 +58,7 @@ export default async function OperadorDashboard() {
           canhotoUrl: p.canhotoUrl,
           comprovantePagamentoUrl: p.comprovantePagamentoUrl,
           finalizadoSemCanhoto: p.finalizadoSemCanhoto,
+          mostraIconeDinheiro: geraPendenciaFinanceira(p.operacao, p.formaPagamento),
         }))}
       />
     </div>

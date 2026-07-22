@@ -16,6 +16,7 @@ type Pedido = {
   canhotoUrl: string | null;
   comprovantePagamentoUrl: string | null;
   finalizadoSemCanhoto: boolean;
+  mostraIconeDinheiro: boolean;
 };
 
 const OPCOES_STATUS = Object.entries(LABEL_STATUS).map(([valor, rotulo]) => ({ valor, rotulo }));

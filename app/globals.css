@@ -367,6 +367,21 @@ button {
   color: var(--orange);
   white-space: normal;
 }
+.icone-dinheiro {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 17px;
+  height: 17px;
+  border-radius: 50%;
+  background: var(--teal);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
+  margin-left: 5px;
+  cursor: default;
+  flex-shrink: 0;
+}
 .btn-legado {
   background: transparent !important;
   border: 1px solid var(--orange);

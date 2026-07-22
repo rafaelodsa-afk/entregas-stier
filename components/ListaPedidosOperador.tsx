@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import PedidoAcoes, { BadgeStatus, LABEL_STATUS, enviarAcao } from "@/components/PedidoAcoes";
+import IconeDinheiro from "@/components/IconeDinheiro";
 
 type Pedido = {
   id: string;
@@ -18,6 +19,7 @@ type Pedido = {
   canhotoUrl: string | null;
   comprovantePagamentoUrl: string | null;
   finalizadoSemCanhoto: boolean;
+  mostraIconeDinheiro: boolean;
 };
 
 // Únicos status em que uma ação em lote se aplica — nunca leva um pedido
@@ -182,6 +184,7 @@ export default function ListaPedidosOperador({ pedidos }: { pedidos: Pedido[] })
                   />
                 )}
                 <span className="pedido-numero">#{p.id}</span> <BadgeStatus status={p.statusEntrega} statusPlanilha={p.statusPlanilha} finalizadoSemCanhoto={p.finalizadoSemCanhoto} />
+                {p.mostraIconeDinheiro && <IconeDinheiro />}
                 {p.statusFinanceiro === "AGUARDANDO_ACERTO" && <span className="badge badge-acerto" style={{ marginLeft: 6 }}>Aguardando acerto</span>}
               </span>
               <span>{Number(p.valorPedido).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</span>

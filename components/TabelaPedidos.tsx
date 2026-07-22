@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import PedidoAcoes, { BadgeStatus } from "@/components/PedidoAcoes";
+import IconeDinheiro from "@/components/IconeDinheiro";
 
 type Pedido = {
   id: string;
@@ -16,6 +17,7 @@ type Pedido = {
   canhotoUrl: string | null;
   comprovantePagamentoUrl: string | null;
   finalizadoSemCanhoto: boolean;
+  mostraIconeDinheiro: boolean;
 };
 
 // Componente só de apresentação — recebe a lista já filtrada (busca +
@@ -70,7 +72,10 @@ export default function TabelaPedidos({ pedidos, podeFinalizarLegado = false }: 
               <td><Link className="link-canhoto" href={`/dashboard/admin/pedidos/${p.id}`}>#{p.id}</Link></td>
               <td>{p.cliente}</td>
               <td>{p.transportador}</td>
-              <td><BadgeStatus status={p.statusEntrega} statusPlanilha={p.statusPlanilha} finalizadoSemCanhoto={p.finalizadoSemCanhoto} /></td>
+              <td>
+                <BadgeStatus status={p.statusEntrega} statusPlanilha={p.statusPlanilha} finalizadoSemCanhoto={p.finalizadoSemCanhoto} />
+                {p.mostraIconeDinheiro && <IconeDinheiro />}
+              </td>
               <td>{p.statusFinanceiro === "AGUARDANDO_ACERTO" ? <span className="badge badge-acerto">Aguardando acerto</span> : "—"}</td>
               <td>{p.valorPedido.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</td>
               <td>

@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { verifySession, COOKIE_NAME, podeVerTudo, podeFinalizarSemCanhoto } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { comLinksAssinados } from "@/lib/r2";
+import { geraPendenciaFinanceira } from "@/lib/pedidos";
 import ImportarPlanilha from "@/components/ImportarPlanilha";
 import CriarPedido from "@/components/CriarPedido";
 import PainelPedidos from "@/components/PainelPedidos";
@@ -27,6 +28,8 @@ export default async function AdminDashboard() {
       canhotoUrl: true,
       comprovantePagamentoUrl: true,
       finalizadoSemCanhoto: true,
+      operacao: true,
+      formaPagamento: true,
     },
   });
   const transportadores = [...new Set(pedidos.map((p) => p.transportador))].sort();
@@ -48,6 +51,7 @@ export default async function AdminDashboard() {
           canhotoUrl: p.canhotoUrl,
           comprovantePagamentoUrl: p.comprovantePagamentoUrl,
           finalizadoSemCanhoto: p.finalizadoSemCanhoto,
+          mostraIconeDinheiro: geraPendenciaFinanceira(p.operacao, p.formaPagamento),
         }))}
       >
         <ImportarPlanilha />
