@@ -11,8 +11,17 @@ jobs:
   backup:
     runs-on: ubuntu-latest
     steps:
-      - name: Instalar cliente do PostgreSQL
-        run: sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client
+      - name: Instalar cliente do PostgreSQL (versão compatível com o Neon)
+        # O Ubuntu padrão só tem pg_dump 16, e o Neon roda Postgres 18 — o
+        # pg_dump recusa fazer dump de um servidor mais novo que ele mesmo.
+        # Usa o repositório oficial do PostgreSQL pra pegar a versão certa.
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq curl ca-certificates gnupg lsb-release
+          curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo gpg --dearmor -o /usr/share/keyrings/postgresql-keyring.gpg
+          echo "deb [signed-by=/usr/share/keyrings/postgresql-keyring.gpg] http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-client-18
 
       - name: Gerar o dump e comprimir
         run: |

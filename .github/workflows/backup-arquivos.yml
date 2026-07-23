@@ -18,25 +18,22 @@ jobs:
         run: curl https://rclone.org/install.sh | sudo bash
 
       - name: Configurar as duas contas R2 (origem e backup)
+        # Usa "rclone config create" em vez de escrever o arquivo .conf na
+        # mão — monta o arquivo sozinho, sem risco de quebrar por causa de
+        # indentação/espaços que um heredoc dentro do YAML acaba trazendo.
         run: |
-          mkdir -p ~/.config/rclone
-          cat > ~/.config/rclone/rclone.conf <<EOF
-          [origem]
-          type = s3
-          provider = Cloudflare
-          access_key_id = ${{ secrets.R2_ACCESS_KEY_ID }}
-          secret_access_key = ${{ secrets.R2_SECRET_ACCESS_KEY }}
-          endpoint = ${{ secrets.R2_ENDPOINT }}
-          acl = private
-
-          [backup]
-          type = s3
-          provider = Cloudflare
-          access_key_id = ${{ secrets.R2_BACKUP_ACCESS_KEY_ID }}
-          secret_access_key = ${{ secrets.R2_BACKUP_SECRET_ACCESS_KEY }}
-          endpoint = ${{ secrets.R2_ENDPOINT }}
-          acl = private
-          EOF
+          rclone config create origem s3 \
+            provider=Cloudflare \
+            access_key_id="${{ secrets.R2_ACCESS_KEY_ID }}" \
+            secret_access_key="${{ secrets.R2_SECRET_ACCESS_KEY }}" \
+            endpoint="${{ secrets.R2_ENDPOINT }}" \
+            acl=private
+          rclone config create backup s3 \
+            provider=Cloudflare \
+            access_key_id="${{ secrets.R2_BACKUP_ACCESS_KEY_ID }}" \
+            secret_access_key="${{ secrets.R2_BACKUP_SECRET_ACCESS_KEY }}" \
+            endpoint="${{ secrets.R2_ENDPOINT }}" \
+            acl=private
 
       - name: Copiar tudo do bucket principal pro bucket de backup
         run: |
