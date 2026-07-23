@@ -22,6 +22,15 @@ const STATUS_VALIDOS = [
   "DEVOLVIDO",
 ];
 
+// Únicas transições que "avancarStatus" pode fazer (aceitar pedido / iniciar
+// rota) — chave é o status ATUAL do pedido, valor é o único próximo status
+// aceito. Qualquer outra combinação (inclusive pular direto pra ENTREGUE)
+// é rejeitada; isso é intencional, não confia em STATUS_VALIDOS aqui.
+const TRANSICOES_AVANCAR_STATUS: Record<string, string> = {
+  AGUARDANDO_ACEITE: "AGUARDANDO_CARREGAMENTO",
+  AGUARDANDO_CARREGAMENTO: "EM_ROTA",
+};
+
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   const papel = (req.headers.get("x-user-papel") ?? "TRANSPORTADOR") as
     | "MASTER"
@@ -53,31 +62,38 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
   switch (body.acao) {
     case "avancarStatus": {
-      // aceitar pedido / iniciar rota — qualquer papel autorizado sobre o pedido
-      if (!STATUS_VALIDOS.includes(body.statusEntrega)) {
-        return NextResponse.json({ erro: "Status inválido" }, { status: 400 });
+      // Aceitar pedido / iniciar rota — só as duas transições reais que a
+      // tela oferece, e só a partir do status atual de verdade do pedido
+      // (nunca pula etapa nem aceita um status arbitrário só porque está
+      // na lista geral de status válidos).
+      const proximoEsperado = TRANSICOES_AVANCAR_STATUS[pedido.statusEntrega];
+      if (!proximoEsperado || body.statusEntrega !== proximoEsperado) {
+        return NextResponse.json({ erro: "Transição de status inválida" }, { status: 400 });
       }
       data.statusEntrega = body.statusEntrega;
       statusParaHistorico = body.statusEntrega;
       break;
     }
     case "finalizarEntrega": {
+      // Canhoto é obrigatório de verdade aqui (não só na tela) — sem isso
+      // não tem como provar que o pedido foi entregue.
+      if (!body.canhotoUrl) {
+        return NextResponse.json({ erro: "Envie o canhoto" }, { status: 400 });
+      }
+      // Confere DE VERDADE o que foi enviado (bytes reais, não só o
+      // Content-Type que o navegador declarou) — só aceita e vincula ao
+      // pedido se bater; senão apaga o que quer que tenha sido enviado.
+      if (!(await arquivoValido(body.canhotoUrl))) {
+        await apagarArquivosR2([body.canhotoUrl]);
+        return NextResponse.json({ erro: "O arquivo enviado não é uma foto ou PDF válido." }, { status: 400 });
+      }
       data.statusEntrega = "ENTREGUE";
       data.dataEntrega = new Date();
       // Só vira pendência financeira se for Venda (padrão quando a
       // planilha não informa operação) E o pagamento for à vista.
       data.statusFinanceiro = geraPendenciaFinanceira(pedido.operacao, pedido.formaPagamento) ? "AGUARDANDO_ACERTO" : "NA";
-      if (body.canhotoUrl) {
-        // Confere DE VERDADE o que foi enviado (bytes reais, não só o
-        // Content-Type que o navegador declarou) — só aceita e vincula ao
-        // pedido se bater; senão apaga o que quer que tenha sido enviado.
-        if (!(await arquivoValido(body.canhotoUrl))) {
-          await apagarArquivosR2([body.canhotoUrl]);
-          return NextResponse.json({ erro: "O arquivo enviado não é uma foto ou PDF válido." }, { status: 400 });
-        }
-        data.canhotoUrl = body.canhotoUrl;
-        data.canhotoTipo = body.canhotoTipo || "foto";
-      }
+      data.canhotoUrl = body.canhotoUrl;
+      data.canhotoTipo = body.canhotoTipo || "foto";
       statusParaHistorico = "ENTREGUE";
       break;
     }
