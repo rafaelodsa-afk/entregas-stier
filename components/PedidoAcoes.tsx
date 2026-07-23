@@ -265,8 +265,16 @@ export default function PedidoAcoes({
           Iniciar rota
         </button>
       )}
-      {blocoCanhoto}
-      {linkCanhoto}
+      {pedido.statusEntrega === "REENTREGA" ? (
+        <p className="muted" style={{ margin: 0 }}>
+          Aguardando reatribuição pela Stier — nenhuma ação necessária da sua parte.
+        </p>
+      ) : (
+        <>
+          {blocoCanhoto}
+          {linkCanhoto}
+        </>
+      )}
       {blocoComprovante}
       {linkComprovante}
       {erro && <p className="erro" style={{ marginTop: 6, width: "100%" }}>{erro}</p>}

@@ -17,9 +17,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   const podeVerAlerta = podeVerTudo(sessao.papel);
   const reentregasPendentes = podeVerAlerta
-    ? await prisma.pedido.count({
-        where: { statusEntrega: "REENTREGA", dataReentrega: { lt: new Date(Date.now() - 24 * 60 * 60 * 1000) } },
-      })
+    ? await prisma.pedido.count({ where: { statusEntrega: "REENTREGA" } })
     : 0;
 
   const abas = [];
