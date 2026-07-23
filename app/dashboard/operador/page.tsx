@@ -15,7 +15,14 @@ export default async function OperadorDashboard() {
   if (sessao.papel !== "TRANSPORTADOR") redirect("/dashboard/admin");
 
   const pedidos = await prisma.pedido.findMany({
-    where: { transportador: { equals: (sessao.transportadorNome ?? "___nenhum___").trim(), mode: "insensitive" } },
+    // Pedido em Reentrega some completamente da visão do transportador —
+    // fica só com quem enxerga tudo (master/admin/analista) até ser
+    // reatribuído; nesse momento passa a existir de novo, já como
+    // Aguardando aceite, só pro transportador novo.
+    where: {
+      transportador: { equals: (sessao.transportadorNome ?? "___nenhum___").trim(), mode: "insensitive" },
+      statusEntrega: { not: "REENTREGA" },
+    },
     orderBy: { dataCriacao: "desc" },
     select: {
       id: true,
@@ -35,7 +42,7 @@ export default async function OperadorDashboard() {
       formaPagamento: true,
     },
   });
-  const pendentes = pedidos.filter((p) => !["ENTREGUE", "CANCELADO", "DEVOLVIDO", "REENTREGA"].includes(p.statusEntrega));
+  const pendentes = pedidos.filter((p) => !["ENTREGUE", "CANCELADO", "DEVOLVIDO"].includes(p.statusEntrega));
   const pedidosComLinks = await Promise.all(pedidos.map(comLinksAssinados));
 
   return (
