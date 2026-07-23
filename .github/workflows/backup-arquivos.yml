@@ -13,29 +13,42 @@ on:
 jobs:
   backup:
     runs-on: ubuntu-latest
+    env:
+      R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+      R2_BUCKET_NAME: ${{ secrets.R2_BUCKET_NAME }}
+      R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+      R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+      R2_BACKUP_BUCKET_NAME: ${{ secrets.R2_BACKUP_BUCKET_NAME }}
+      R2_BACKUP_ACCESS_KEY_ID: ${{ secrets.R2_BACKUP_ACCESS_KEY_ID }}
+      R2_BACKUP_SECRET_ACCESS_KEY: ${{ secrets.R2_BACKUP_SECRET_ACCESS_KEY }}
     steps:
       - name: Instalar rclone
         run: curl https://rclone.org/install.sh | sudo bash
 
       - name: Configurar as duas contas R2 (origem e backup)
         # Usa "rclone config create" em vez de escrever o arquivo .conf na
-        # mão — monta o arquivo sozinho, sem risco de quebrar por causa de
-        # indentação/espaços que um heredoc dentro do YAML acaba trazendo.
+        # mão. "tr -d '\r\n'" limpa qualquer quebra de linha que possa ter
+        # entrado por acaso num segredo colado no GitHub.
         run: |
+          set -euo pipefail
+          limpar() { printf '%s' "$1" | tr -d '\r\n'; }
           rclone config create origem s3 \
             provider=Cloudflare \
-            access_key_id="${{ secrets.R2_ACCESS_KEY_ID }}" \
-            secret_access_key="${{ secrets.R2_SECRET_ACCESS_KEY }}" \
-            endpoint="${{ secrets.R2_ENDPOINT }}" \
+            access_key_id="$(limpar "$R2_ACCESS_KEY_ID")" \
+            secret_access_key="$(limpar "$R2_SECRET_ACCESS_KEY")" \
+            endpoint="$(limpar "$R2_ENDPOINT")" \
             acl=private
           rclone config create backup s3 \
             provider=Cloudflare \
-            access_key_id="${{ secrets.R2_BACKUP_ACCESS_KEY_ID }}" \
-            secret_access_key="${{ secrets.R2_BACKUP_SECRET_ACCESS_KEY }}" \
-            endpoint="${{ secrets.R2_ENDPOINT }}" \
+            access_key_id="$(limpar "$R2_BACKUP_ACCESS_KEY_ID")" \
+            secret_access_key="$(limpar "$R2_BACKUP_SECRET_ACCESS_KEY")" \
+            endpoint="$(limpar "$R2_ENDPOINT")" \
             acl=private
 
       - name: Copiar tudo do bucket principal pro bucket de backup
         run: |
-          rclone copy "origem:${{ secrets.R2_BUCKET_NAME }}" "backup:${{ secrets.R2_BACKUP_BUCKET_NAME }}/arquivos" \
+          set -euo pipefail
+          BUCKET_ORIGEM="$(printf '%s' "$R2_BUCKET_NAME" | tr -d '\r\n')"
+          BUCKET_BACKUP="$(printf '%s' "$R2_BACKUP_BUCKET_NAME" | tr -d '\r\n')"
+          rclone copy "origem:$BUCKET_ORIGEM" "backup:$BUCKET_BACKUP/arquivos" \
             --checksum --transfers 8 --checkers 16 -v

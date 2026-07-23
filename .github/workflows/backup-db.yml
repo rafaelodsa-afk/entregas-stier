@@ -10,6 +10,12 @@ on:
 jobs:
   backup:
     runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+      R2_BACKUP_BUCKET_NAME: ${{ secrets.R2_BACKUP_BUCKET_NAME }}
+      R2_BACKUP_ACCESS_KEY_ID: ${{ secrets.R2_BACKUP_ACCESS_KEY_ID }}
+      R2_BACKUP_SECRET_ACCESS_KEY: ${{ secrets.R2_BACKUP_SECRET_ACCESS_KEY }}
     steps:
       - name: Instalar cliente do PostgreSQL (versão compatível com o Neon)
         # O Ubuntu padrão só tem pg_dump 16, e o Neon roda Postgres 18 — o
@@ -24,22 +30,28 @@ jobs:
           sudo apt-get install -y -qq postgresql-client-18
 
       - name: Gerar o dump e comprimir
+        # printf + tr limpa qualquer quebra de linha (\r ou \n) que possa
+        # ter entrado por acaso num segredo colado no GitHub — sem isso, um
+        # segredo com quebra de linha embutida quebra os comandos abaixo.
         run: |
           set -euo pipefail
+          DB_URL="$(printf '%s' "$DATABASE_URL" | tr -d '\r\n')"
           TIMESTAMP=$(date -u +"%Y-%m-%dT%H-%M-%SZ")
           echo "TIMESTAMP=$TIMESTAMP" >> "$GITHUB_ENV"
-          pg_dump "${{ secrets.DATABASE_URL }}" --no-owner --no-privileges | gzip -9 > "stier-db-$TIMESTAMP.sql.gz"
+          /usr/lib/postgresql/18/bin/pg_dump "$DB_URL" --no-owner --no-privileges | gzip -9 > "stier-db-$TIMESTAMP.sql.gz"
           ls -lh "stier-db-$TIMESTAMP.sql.gz"
 
       - name: Configurar AWS CLI para o endpoint do R2
         run: |
-          aws configure set aws_access_key_id "${{ secrets.R2_BACKUP_ACCESS_KEY_ID }}"
-          aws configure set aws_secret_access_key "${{ secrets.R2_BACKUP_SECRET_ACCESS_KEY }}"
+          aws configure set aws_access_key_id "$(printf '%s' "$R2_BACKUP_ACCESS_KEY_ID" | tr -d '\r\n')"
+          aws configure set aws_secret_access_key "$(printf '%s' "$R2_BACKUP_SECRET_ACCESS_KEY" | tr -d '\r\n')"
           aws configure set default.region auto
 
       - name: Enviar o dump pro bucket de backup (R2)
         run: |
+          ENDPOINT="$(printf '%s' "$R2_ENDPOINT" | tr -d '\r\n')"
+          BUCKET="$(printf '%s' "$R2_BACKUP_BUCKET_NAME" | tr -d '\r\n')"
           aws s3 cp "stier-db-$TIMESTAMP.sql.gz" \
-            "s3://${{ secrets.R2_BACKUP_BUCKET_NAME }}/banco/stier-db-$TIMESTAMP.sql.gz" \
-            --endpoint-url "${{ secrets.R2_ENDPOINT }}"
+            "s3://$BUCKET/banco/stier-db-$TIMESTAMP.sql.gz" \
+            --endpoint-url "$ENDPOINT"
           echo "Backup salvo: banco/stier-db-$TIMESTAMP.sql.gz"
