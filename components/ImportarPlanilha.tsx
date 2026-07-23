@@ -31,8 +31,10 @@ type Resumo = {
   canceladosPlanilha: number;
   aguardandoCanhoto: number;
   protegidos: { linha: number; id: string | null; motivo: string }[];
+  protegidosTotal: number;
   semMudancaOperacional: number;
   ignorados: { linha: number; id: string | null; motivo: string }[];
+  ignoradosTotal: number;
 };
 
 // Faixa Unicode das marcas de acento combinantes (0x0300–0x036F), usada
@@ -269,9 +271,9 @@ export default function ImportarPlanilha() {
             <li><strong>{resumo.reentregaPlanilha}</strong> entrou(aram) em reentrega agora</li>
             <li><strong>{resumo.canceladosPlanilha}</strong> cancelado(s) pela planilha</li>
             <li><strong>{resumo.aguardandoCanhoto}</strong> mudou(aram) pra "aguardando canhoto"</li>
-            <li><strong>{resumo.protegidos.length}</strong> protegido(s) sem alteração</li>
+            <li><strong>{resumo.protegidosTotal}</strong> protegido(s) sem alteração</li>
             <li><strong>{resumo.semMudancaOperacional}</strong> sem mudança operacional</li>
-            <li><strong>{resumo.ignorados.length}</strong> ignorado(s) (dados incompletos)</li>
+            <li><strong>{resumo.ignoradosTotal}</strong> ignorado(s) (dados incompletos)</li>
           </ul>
           {(resumo.ignorados.length > 0 || resumo.protegidos.length > 0) && (
             <ul className="erros-import">
@@ -323,9 +325,9 @@ export default function ImportarPlanilha() {
             <li><strong>{concluido.reentregaPlanilha}</strong> entrou(aram) em reentrega agora</li>
             <li><strong>{concluido.canceladosPlanilha}</strong> cancelado(s) pela planilha</li>
             <li><strong>{concluido.aguardandoCanhoto}</strong> mudou(aram) pra "aguardando canhoto"</li>
-            <li><strong>{concluido.protegidos.length}</strong> protegido(s) sem alteração</li>
+            <li><strong>{concluido.protegidosTotal}</strong> protegido(s) sem alteração</li>
             <li><strong>{concluido.semMudancaOperacional}</strong> sem mudança operacional</li>
-            <li><strong>{concluido.ignorados.length}</strong> ignorado(s)</li>
+            <li><strong>{concluido.ignoradosTotal}</strong> ignorado(s)</li>
           </ul>
         </div>
       )}

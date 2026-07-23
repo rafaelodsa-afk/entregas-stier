@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { podeVerTudo } from "@/lib/auth";
-import { processarImportacao, type LinhaImportada } from "@/lib/pedidos";
+import { processarImportacao, apareceNaListaDetalhada, type LinhaImportada } from "@/lib/pedidos";
 
 // A planilha é lida no navegador (biblioteca xlsx do lado do cliente) — aqui
 // só chega o JSON já extraído, bem mais leve que o arquivo original (que
@@ -35,11 +35,14 @@ export async function POST(req: NextRequest) {
   const resultados = await processarImportacao(linhas, nomeUsuario, Boolean(body.confirmar));
 
   const contar = (classificacao: string) => resultados.filter((r) => r.classificacao === classificacao).length;
+  // Lista detalhada (linha a linha) omite tipos de motivo marcados como
+  // esperado/protegido — mas o total continua contando todo mundo,
+  // suprimido ou não.
   const ignorados = resultados
-    .filter((r) => r.classificacao === "ignorado")
-    .map((r) => ({ linha: r.linha, id: r.id, motivo: r.motivo }));
+    .filter((r) => r.classificacao === "ignorado" && apareceNaListaDetalhada(r))
+    .map((r) => ({ linha: r.linha, id: r.id, motivo: (r as any).motivo as string }));
   const protegidos = resultados
-    .filter((r) => r.classificacao === "protegido")
+    .filter((r) => r.classificacao === "protegido" && apareceNaListaDetalhada(r))
     .map((r) => ({ linha: r.linha, id: r.id, motivo: (r as any).motivo as string }));
 
   return NextResponse.json({
@@ -52,7 +55,9 @@ export async function POST(req: NextRequest) {
     canceladosPlanilha: contar("cancelado_planilha"),
     aguardandoCanhoto: contar("aguardando_canhoto"),
     protegidos,
+    protegidosTotal: contar("protegido"),
     semMudancaOperacional: contar("sem_mudanca_operacional"),
     ignorados,
+    ignoradosTotal: contar("ignorado"),
   });
 }

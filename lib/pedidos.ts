@@ -182,6 +182,17 @@ export type LinhaImportada = LinhaPedido & {
   statusEntregaPlanilha?: unknown; // valor cru da coluna opcional "Status de entrega"
 };
 
+// Identifica o tipo exato de cada mensagem "protegido"/"ignorado" — usado
+// só pra decidir o que aparece na lista detalhada da importação (ver
+// MOTIVOS_SUPRIMIDOS_DA_LISTA logo abaixo). O motivo em texto livre
+// continua existindo pra exibição; isso aqui é uma chave estável, que não
+// muda mesmo que o texto do motivo mude.
+export type MotivoTipo =
+  | "protegido_entregue"
+  | "protegido_cancelado"
+  | "protegido_entregue_apos_aceite"
+  | "ignorado_campos_obrigatorios";
+
 export type ResultadoLinhaImportacao =
   | { linha: number; id: string; classificacao: "novo" }
   | { linha: number; id: string; classificacao: "novo_aguardando_canhoto" }
@@ -191,9 +202,29 @@ export type ResultadoLinhaImportacao =
   | { linha: number; id: string; classificacao: "reentrega_planilha" }
   | { linha: number; id: string; classificacao: "cancelado_planilha" }
   | { linha: number; id: string; classificacao: "aguardando_canhoto" }
-  | { linha: number; id: string; classificacao: "protegido"; motivo: string }
+  | { linha: number; id: string; classificacao: "protegido"; motivo: string; motivoTipo: MotivoTipo }
   | { linha: number; id: string; classificacao: "sem_mudanca_operacional" }
-  | { linha: number; id: string | null; classificacao: "ignorado"; motivo: string };
+  | { linha: number; id: string | null; classificacao: "ignorado"; motivo: string; motivoTipo: MotivoTipo };
+
+// Tipos de motivo que NÃO aparecem na lista detalhada da importação — são
+// casos de comportamento esperado/protegido, não algo que precise de
+// atenção. Continuam contados normalmente nos números do resumo (ver
+// app/api/pedidos/importar/route.ts). Pra suprimir mais tipos no futuro,
+// só adicionar a chave aqui.
+export const MOTIVOS_SUPRIMIDOS_DA_LISTA: ReadonlySet<MotivoTipo> = new Set([
+  "protegido_cancelado",
+  "protegido_entregue_apos_aceite",
+]);
+
+// Se um resultado deve aparecer na lista linha-a-linha do resumo de
+// importação — resultados sem motivo (a maioria) sempre aparecem; os com
+// motivo (protegido/ignorado) só aparecem se o tipo não estiver suprimido.
+export function apareceNaListaDetalhada(r: ResultadoLinhaImportacao): boolean {
+  if (r.classificacao === "protegido" || r.classificacao === "ignorado") {
+    return !MOTIVOS_SUPRIMIDOS_DA_LISTA.has(r.motivoTipo);
+  }
+  return true;
+}
 
 function montarDados(linha: LinhaImportada, cliente: string, transportador: string) {
   return {
@@ -348,6 +379,7 @@ export async function processarImportacao(
         id: id || null,
         classificacao: "ignorado",
         motivo: "Preencha nº do pedido, cliente e transportador",
+        motivoTipo: "ignorado_campos_obrigatorios",
       });
       continue;
     }
@@ -416,6 +448,7 @@ export async function processarImportacao(
         id,
         classificacao: "protegido",
         motivo: "Pedido já está Entregue — protegido contra alterações da importação",
+        motivoTipo: "protegido_entregue",
       });
       continue;
     }
@@ -429,6 +462,7 @@ export async function processarImportacao(
         id,
         classificacao: "protegido",
         motivo: "Pedido já está Cancelado — não é alterado",
+        motivoTipo: "protegido_cancelado",
       });
       continue;
     }
@@ -541,6 +575,7 @@ export async function processarImportacao(
         id,
         classificacao: "protegido",
         motivo: `Pedido já foi aceito no site (status atual: ${LABEL_STATUS[existente.statusEntrega] ?? existente.statusEntrega}) — sinal de "Entregue" da planilha ignorado`,
+        motivoTipo: "protegido_entregue_apos_aceite",
       });
       continue;
     }
