@@ -186,7 +186,9 @@ export type ResultadoLinhaImportacao =
   | { linha: number; id: string; classificacao: "novo" }
   | { linha: number; id: string; classificacao: "novo_aguardando_canhoto" }
   | { linha: number; id: string; classificacao: "novo_cancelado" }
+  | { linha: number; id: string; classificacao: "novo_reentrega" }
   | { linha: number; id: string; classificacao: "reatribuido" }
+  | { linha: number; id: string; classificacao: "reentrega_planilha" }
   | { linha: number; id: string; classificacao: "cancelado_planilha" }
   | { linha: number; id: string; classificacao: "aguardando_canhoto" }
   | { linha: number; id: string; classificacao: "protegido"; motivo: string }
@@ -210,30 +212,33 @@ function montarDados(linha: LinhaImportada, cliente: string, transportador: stri
   };
 }
 
+// Monta o payload de reatribuição (volta pra Aguardando aceite com os
+// dados novos da linha) sem gravar nada — quem chama decide se persiste
+// (gravar=true) e sempre usa o retorno pra atualizar o estado simulado.
+function montarReatribuicao(dados: ReturnType<typeof montarDados>, statusPlanilhaTexto: string | null) {
+  return {
+    ...dados,
+    ...(statusPlanilhaTexto ? { statusPlanilha: statusPlanilhaTexto } : {}),
+    statusEntrega: "AGUARDANDO_ACEITE" as const,
+    statusFinanceiro: "NA" as const,
+    dataEntrega: null,
+    observacaoProblema: null,
+    dataReentrega: null,
+  };
+}
+
 async function reatribuirPedido(
   id: string,
-  dados: ReturnType<typeof montarDados>,
-  statusPlanilhaTexto: string | null,
+  novoEstado: ReturnType<typeof montarReatribuicao>,
   transportadorAnterior: string,
   nomeUsuario: string
 ) {
-  await prisma.pedido.update({
-    where: { id },
-    data: {
-      ...dados,
-      ...(statusPlanilhaTexto ? { statusPlanilha: statusPlanilhaTexto } : {}),
-      statusEntrega: "AGUARDANDO_ACEITE",
-      statusFinanceiro: "NA",
-      dataEntrega: null,
-      observacaoProblema: null,
-      dataReentrega: null,
-    },
-  });
+  await prisma.pedido.update({ where: { id }, data: novoEstado });
   await prisma.historicoPedido.create({
     data: {
       pedidoId: id,
       status: "AGUARDANDO_ACEITE",
-      usuario: `${nomeUsuario} (reatribuído de ${transportadorAnterior} para ${dados.transportador})`,
+      usuario: `${nomeUsuario} (reatribuído de ${transportadorAnterior} para ${novoEstado.transportador})`,
     },
   });
 }
@@ -252,21 +257,30 @@ async function atualizarSomenteStatusPlanilha(id: string, statusPlanilhaTexto: s
 //
 // Pedidos NOVOS: sempre são criados, seja qual for o status que a planilha
 // mostrar (Entregue → nasce "Aguardando canhoto"; Cancelado → nasce
-// Cancelado; qualquer outra coisa → nasce Aguardando aceite, como sempre).
+// Cancelado; Reentrega → nasce "Reentrega"; qualquer outra coisa → nasce
+// Aguardando aceite, como sempre).
 //
 // Pedidos que JÁ EXISTEM — prioridade nessa ordem, parando na primeira que valer:
 //   a) ENTREGUE de verdade  → nunca mexe, protegido pra sempre.
 //   b) CANCELADO            → nunca mexe, já está encerrado.
-//   c/e) REENTREGA (no sistema, ou reportada agora pela planilha) → reatribui,
-//        volta pra "Aguardando aceite" com os dados novos da linha.
+//   c) REENTREGA no sistema → planilha diz Cancelado → cancela; planilha diz
+//      Reentrega → continua Reentrega (ainda não resolvido); qualquer outro
+//      valor (inclusive em branco) → reatribui, volta pra "Aguardando
+//      aceite" com os dados novos — nunca pula direto pra um status mais
+//      avançado, sempre exige um novo aceite do transportador.
 //   d) Planilha diz "Cancelado" → cancela o pedido no sistema.
-//   f) Planilha diz "Entregue"  → muda pra "Aguardando canhoto" (a não ser
-//      que já esteja nesse status — aí não muda nada operacional).
-//   g) Nada disso → não mexe no status operacional, só atualiza o campo
+//   e) Planilha diz "Reentrega" → pedido vira Reentrega (só a partir daqui,
+//      numa linha seguinte, é que pode ser reatribuído — ver item c).
+//   f) Planilha diz "Entregue" E status atual ainda é Aguardando aceite →
+//      muda pra "Aguardando canhoto".
+//   g) Planilha diz "Entregue" mas o status atual já passou de Aguardando
+//      aceite → ignora, mantém o status atual.
+//   h) Nada disso → não mexe no status operacional, só atualiza o campo
 //      informativo (status reportado pela planilha).
 //
-// Linhas repetidas (mesmo Nº Pedido) na mesma planilha: só a última conta,
-// as anteriores são descartadas silenciosamente antes de processar.
+// Linhas repetidas (mesmo Nº Pedido) no MESMO arquivo: processadas em ordem
+// cronológica pela coluna DATA (não pela posição no arquivo) — cada uma
+// como se fosse uma importação em um dia diferente, na sequência certa.
 export async function processarImportacao(
   linhasOriginais: LinhaImportada[],
   nomeUsuario: string,
@@ -274,19 +288,57 @@ export async function processarImportacao(
 ): Promise<ResultadoLinhaImportacao[]> {
   const resultados: ResultadoLinhaImportacao[] = [];
 
-  const indiceDaUltimaOcorrenciaPorId = new Map<string, number>();
-  linhasOriginais.forEach((linha, indice) => {
+  // Agrupa por Nº Pedido e ordena cada grupo por DATA crescente. Linhas
+  // sem DATA suficiente pra comparar mantêm a ordem original entre si
+  // (sort é estável). O grupo inteiro é processado na primeira posição em
+  // que o id aparece no arquivo — não muda a ordem relativa entre ids
+  // diferentes, só a ordem DENTRO de cada grupo de duplicatas.
+  const gruposPorId = new Map<string, LinhaImportada[]>();
+  for (const linha of linhasOriginais) {
     const id = String(linha.id ?? "").trim();
-    if (id) indiceDaUltimaOcorrenciaPorId.set(id, indice);
-  });
-
-  for (let indice = 0; indice < linhasOriginais.length; indice++) {
-    const linha = linhasOriginais[indice];
+    if (!id) continue;
+    if (!gruposPorId.has(id)) gruposPorId.set(id, []);
+    gruposPorId.get(id)!.push(linha);
+  }
+  for (const grupo of gruposPorId.values()) {
+    grupo.sort((a, b) => {
+      const dataA = parseDataPrevista(a.dataPedido);
+      const dataB = parseDataPrevista(b.dataPedido);
+      if (!dataA || !dataB) return 0;
+      return dataA.getTime() - dataB.getTime();
+    });
+  }
+  const idsJaEnfileirados = new Set<string>();
+  const linhas: LinhaImportada[] = [];
+  for (const linha of linhasOriginais) {
     const id = String(linha.id ?? "").trim();
+    if (!id) {
+      linhas.push(linha); // sem id -> segue sozinha, cai no "ignorado" abaixo
+      continue;
+    }
+    if (idsJaEnfileirados.has(id)) continue; // já enfileirado junto com o resto do grupo
+    idsJaEnfileirados.add(id);
+    linhas.push(...gruposPorId.get(id)!);
+  }
 
-    // Linha repetida (não é a última ocorrência desse Nº Pedido) — descarta sem reportar.
-    if (id && indiceDaUltimaOcorrenciaPorId.get(id) !== indice) continue;
+  // Estado simulado por id, usado no lugar de uma nova consulta ao banco
+  // quando o MESMO pedido já foi tocado por uma linha anterior desta
+  // mesma importação (inclusive em modo prévia, gravar=false) — assim a
+  // segunda linha de uma duplicata sempre "vê" o resultado da primeira,
+  // como se fossem importações sequenciais em dias diferentes.
+  const estadoLocal = new Map<string, any>();
+  async function buscarEstadoAtual(id: string) {
+    if (estadoLocal.has(id)) return estadoLocal.get(id);
+    const doBanco = await prisma.pedido.findUnique({ where: { id } });
+    if (doBanco) estadoLocal.set(id, doBanco);
+    return doBanco;
+  }
+  function atualizarEstadoLocal(id: string, mudancas: Record<string, any>) {
+    estadoLocal.set(id, { ...(estadoLocal.get(id) ?? {}), id, ...mudancas });
+  }
 
+  for (const linha of linhas) {
+    const id = String(linha.id ?? "").trim();
     const cliente = String(linha.cliente ?? "").trim();
     const transportador = String(linha.transportador ?? "").trim();
 
@@ -304,41 +356,53 @@ export async function processarImportacao(
     const statusPlanilhaTexto = textoStatusPlanilha(linha.statusEntregaPlanilha);
     const dados = montarDados(linha, cliente, transportador);
     const dadosComInformativo = { ...dados, ...(statusPlanilhaTexto ? { statusPlanilha: statusPlanilhaTexto } : {}) };
-    const existente = await prisma.pedido.findUnique({ where: { id } });
+    const existente = await buscarEstadoAtual(id);
 
     if (!existente) {
       if (statusPlanilha === "CANCELADO") {
+        const novoEstado = { ...dadosComInformativo, statusEntrega: "CANCELADO" as const, statusFinanceiro: "NA" as const };
         if (gravar) {
-          await prisma.pedido.create({
-            data: { id, ...dadosComInformativo, statusEntrega: "CANCELADO", statusFinanceiro: "NA" },
-          });
+          await prisma.pedido.create({ data: { id, ...novoEstado } });
           await prisma.historicoPedido.create({
             data: { pedidoId: id, status: "CANCELADO", usuario: `${nomeUsuario} (via importação de planilha)` },
           });
         }
+        atualizarEstadoLocal(id, novoEstado);
         resultados.push({ linha: linha.linha, id, classificacao: "novo_cancelado" });
         continue;
       }
       if (statusPlanilha === "ENTREGUE") {
+        const novoEstado = { ...dadosComInformativo, statusEntrega: "AGUARDANDO_CANHOTO" as const, statusFinanceiro: "NA" as const };
         if (gravar) {
-          await prisma.pedido.create({
-            data: { id, ...dadosComInformativo, statusEntrega: "AGUARDANDO_CANHOTO", statusFinanceiro: "NA" },
-          });
+          await prisma.pedido.create({ data: { id, ...novoEstado } });
           await prisma.historicoPedido.create({
             data: { pedidoId: id, status: "AGUARDANDO_CANHOTO", usuario: `${nomeUsuario} (via importação de planilha)` },
           });
         }
+        atualizarEstadoLocal(id, novoEstado);
         resultados.push({ linha: linha.linha, id, classificacao: "novo_aguardando_canhoto" });
         continue;
       }
+      if (statusPlanilha === "REENTREGA") {
+        const novoEstado = { ...dadosComInformativo, statusEntrega: "REENTREGA" as const, statusFinanceiro: "NA" as const, dataReentrega: new Date() };
+        if (gravar) {
+          await prisma.pedido.create({ data: { id, ...novoEstado } });
+          await prisma.historicoPedido.create({
+            data: { pedidoId: id, status: "REENTREGA", usuario: `${nomeUsuario} (via importação de planilha)` },
+          });
+        }
+        atualizarEstadoLocal(id, novoEstado);
+        resultados.push({ linha: linha.linha, id, classificacao: "novo_reentrega" });
+        continue;
+      }
+      const novoEstado = { ...dadosComInformativo, statusEntrega: "AGUARDANDO_ACEITE" as const, statusFinanceiro: "NA" as const };
       if (gravar) {
-        await prisma.pedido.create({
-          data: { id, ...dadosComInformativo, statusEntrega: "AGUARDANDO_ACEITE", statusFinanceiro: "NA" },
-        });
+        await prisma.pedido.create({ data: { id, ...novoEstado } });
         await prisma.historicoPedido.create({
           data: { pedidoId: id, status: "AGUARDANDO_ACEITE", usuario: nomeUsuario },
         });
       }
+      atualizarEstadoLocal(id, novoEstado);
       resultados.push({ linha: linha.linha, id, classificacao: "novo" });
       continue;
     }
@@ -346,6 +410,7 @@ export async function processarImportacao(
     // a) Entregue de verdade — protegido pra sempre.
     if (existente.statusEntrega === "ENTREGUE") {
       if (gravar) await atualizarSomenteStatusPlanilha(id, statusPlanilhaTexto);
+      atualizarEstadoLocal(id, statusPlanilhaTexto ? { statusPlanilha: statusPlanilhaTexto } : {});
       resultados.push({
         linha: linha.linha,
         id,
@@ -358,6 +423,7 @@ export async function processarImportacao(
     // b) Cancelado já está encerrado.
     if (existente.statusEntrega === "CANCELADO") {
       if (gravar) await atualizarSomenteStatusPlanilha(id, statusPlanilhaTexto);
+      atualizarEstadoLocal(id, statusPlanilhaTexto ? { statusPlanilha: statusPlanilhaTexto } : {});
       resultados.push({
         linha: linha.linha,
         id,
@@ -367,29 +433,80 @@ export async function processarImportacao(
       continue;
     }
 
-    // c/e) Reentrega (no nosso sistema, ou apontada agora pela planilha) → reatribui.
-    if (existente.statusEntrega === "REENTREGA" || statusPlanilha === "REENTREGA") {
-      if (gravar) await reatribuirPedido(id, dados, statusPlanilhaTexto, existente.transportador, nomeUsuario);
+    // c) Já está em Reentrega — regra específica: só Cancelado ou Reentrega
+    // (mantém) da planilha não reatribuem; qualquer outro valor reatribui
+    // e sempre exige um novo aceite (nunca pula direto pra um status mais
+    // avançado como "Em rota" só porque a planilha diz isso).
+    if (existente.statusEntrega === "REENTREGA") {
+      if (statusPlanilha === "CANCELADO") {
+        const novoEstado = {
+          statusEntrega: "CANCELADO" as const,
+          observacaoProblema: "Cancelado via importação de planilha",
+          dataReentrega: null,
+          ...(statusPlanilhaTexto ? { statusPlanilha: statusPlanilhaTexto } : {}),
+        };
+        if (gravar) {
+          await prisma.pedido.update({ where: { id }, data: novoEstado });
+          await prisma.historicoPedido.create({
+            data: { pedidoId: id, status: "CANCELADO", usuario: `${nomeUsuario} (via importação de planilha)` },
+          });
+        }
+        atualizarEstadoLocal(id, novoEstado);
+        resultados.push({ linha: linha.linha, id, classificacao: "cancelado_planilha" });
+        continue;
+      }
+      if (statusPlanilha === "REENTREGA") {
+        if (gravar) await atualizarSomenteStatusPlanilha(id, statusPlanilhaTexto);
+        atualizarEstadoLocal(id, statusPlanilhaTexto ? { statusPlanilha: statusPlanilhaTexto } : {});
+        resultados.push({ linha: linha.linha, id, classificacao: "sem_mudanca_operacional" });
+        continue;
+      }
+      // qualquer outro valor (Em rota, Entregue, Aguardando carregamento, em
+      // branco etc.) — reatribui com os dados novos, sempre volta pra
+      // Aguardando aceite.
+      const novoEstado = montarReatribuicao(dados, statusPlanilhaTexto);
+      if (gravar) await reatribuirPedido(id, novoEstado, existente.transportador, nomeUsuario);
+      atualizarEstadoLocal(id, novoEstado);
       resultados.push({ linha: linha.linha, id, classificacao: "reatribuido" });
       continue;
     }
 
     // d) Planilha avisa de um cancelamento novo.
     if (statusPlanilha === "CANCELADO") {
+      const novoEstado = {
+        statusEntrega: "CANCELADO" as const,
+        observacaoProblema: "Cancelado via importação de planilha",
+        ...(statusPlanilhaTexto ? { statusPlanilha: statusPlanilhaTexto } : {}),
+      };
       if (gravar) {
-        await prisma.pedido.update({
-          where: { id },
-          data: {
-            statusEntrega: "CANCELADO",
-            observacaoProblema: "Cancelado via importação de planilha",
-            ...(statusPlanilhaTexto ? { statusPlanilha: statusPlanilhaTexto } : {}),
-          },
-        });
+        await prisma.pedido.update({ where: { id }, data: novoEstado });
         await prisma.historicoPedido.create({
           data: { pedidoId: id, status: "CANCELADO", usuario: `${nomeUsuario} (via importação de planilha)` },
         });
       }
+      atualizarEstadoLocal(id, novoEstado);
       resultados.push({ linha: linha.linha, id, classificacao: "cancelado_planilha" });
+      continue;
+    }
+
+    // e) Planilha diz "Reentrega" e o pedido ainda não estava em Reentrega
+    // — vira Reentrega agora (a reatribuição em si só acontece depois,
+    // numa linha seguinte, via item c).
+    if (statusPlanilha === "REENTREGA") {
+      const novoEstado = {
+        statusEntrega: "REENTREGA" as const,
+        observacaoProblema: "Reentrega reportada via importação de planilha",
+        dataReentrega: new Date(),
+        ...(statusPlanilhaTexto ? { statusPlanilha: statusPlanilhaTexto } : {}),
+      };
+      if (gravar) {
+        await prisma.pedido.update({ where: { id }, data: novoEstado });
+        await prisma.historicoPedido.create({
+          data: { pedidoId: id, status: "REENTREGA", usuario: `${nomeUsuario} (via importação de planilha)` },
+        });
+      }
+      atualizarEstadoLocal(id, novoEstado);
+      resultados.push({ linha: linha.linha, id, classificacao: "reentrega_planilha" });
       continue;
     }
 
@@ -398,18 +515,17 @@ export async function processarImportacao(
     // sinal "Entregue" da planilha não pode mais pular o fluxo real de
     // entrega (canhoto) — isso é decidido em g) logo abaixo.
     if (statusPlanilha === "ENTREGUE" && existente.statusEntrega === "AGUARDANDO_ACEITE") {
+      const novoEstado = {
+        statusEntrega: "AGUARDANDO_CANHOTO" as const,
+        ...(statusPlanilhaTexto ? { statusPlanilha: statusPlanilhaTexto } : {}),
+      };
       if (gravar) {
-        await prisma.pedido.update({
-          where: { id },
-          data: {
-            statusEntrega: "AGUARDANDO_CANHOTO",
-            ...(statusPlanilhaTexto ? { statusPlanilha: statusPlanilhaTexto } : {}),
-          },
-        });
+        await prisma.pedido.update({ where: { id }, data: novoEstado });
         await prisma.historicoPedido.create({
           data: { pedidoId: id, status: "AGUARDANDO_CANHOTO", usuario: `${nomeUsuario} (via importação de planilha)` },
         });
       }
+      atualizarEstadoLocal(id, novoEstado);
       resultados.push({ linha: linha.linha, id, classificacao: "aguardando_canhoto" });
       continue;
     }
@@ -419,6 +535,7 @@ export async function processarImportacao(
     // o status atual, só atualizando o campo informativo.
     if (statusPlanilha === "ENTREGUE") {
       if (gravar) await atualizarSomenteStatusPlanilha(id, statusPlanilhaTexto);
+      atualizarEstadoLocal(id, statusPlanilhaTexto ? { statusPlanilha: statusPlanilhaTexto } : {});
       resultados.push({
         linha: linha.linha,
         id,
@@ -428,8 +545,9 @@ export async function processarImportacao(
       continue;
     }
 
-    // g) Nada disso — só atualiza o campo informativo.
+    // h) Nada disso — só atualiza o campo informativo.
     if (gravar) await atualizarSomenteStatusPlanilha(id, statusPlanilhaTexto);
+    atualizarEstadoLocal(id, statusPlanilhaTexto ? { statusPlanilha: statusPlanilhaTexto } : {});
     resultados.push({ linha: linha.linha, id, classificacao: "sem_mudanca_operacional" });
   }
 

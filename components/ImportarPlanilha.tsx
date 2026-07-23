@@ -25,7 +25,9 @@ type Resumo = {
   novos: number;
   novosAguardandoCanhoto: number;
   novosCancelados: number;
+  novosReentrega: number;
   reatribuidos: number;
+  reentregaPlanilha: number;
   canceladosPlanilha: number;
   aguardandoCanhoto: number;
   protegidos: { linha: number; id: string | null; motivo: string }[];
@@ -262,7 +264,9 @@ export default function ImportarPlanilha() {
             <li><strong>{resumo.novos}</strong> novo(s)</li>
             <li><strong>{resumo.novosAguardandoCanhoto}</strong> novo(s) já como "aguardando canhoto"</li>
             <li><strong>{resumo.novosCancelados}</strong> novo(s) já cancelado(s)</li>
-            <li><strong>{resumo.reatribuidos}</strong> reatribuído(s) (reentrega)</li>
+            <li><strong>{resumo.novosReentrega}</strong> novo(s) já em reentrega</li>
+            <li><strong>{resumo.reatribuidos}</strong> reatribuído(s) (saiu da reentrega, aguardando novo aceite)</li>
+            <li><strong>{resumo.reentregaPlanilha}</strong> entrou(aram) em reentrega agora</li>
             <li><strong>{resumo.canceladosPlanilha}</strong> cancelado(s) pela planilha</li>
             <li><strong>{resumo.aguardandoCanhoto}</strong> mudou(aram) pra "aguardando canhoto"</li>
             <li><strong>{resumo.protegidos.length}</strong> protegido(s) sem alteração</li>
@@ -293,7 +297,9 @@ export default function ImportarPlanilha() {
                     resumo.novos +
                     resumo.novosAguardandoCanhoto +
                     resumo.novosCancelados +
+                    resumo.novosReentrega +
                     resumo.reatribuidos +
+                    resumo.reentregaPlanilha +
                     resumo.canceladosPlanilha +
                     resumo.aguardandoCanhoto
                   } pedido(s))`}
@@ -312,7 +318,9 @@ export default function ImportarPlanilha() {
             <li><strong>{concluido.novos}</strong> criado(s)</li>
             <li><strong>{concluido.novosAguardandoCanhoto}</strong> criado(s) já como "aguardando canhoto"</li>
             <li><strong>{concluido.novosCancelados}</strong> criado(s) já cancelado(s)</li>
+            <li><strong>{concluido.novosReentrega}</strong> criado(s) já em reentrega</li>
             <li><strong>{concluido.reatribuidos}</strong> reatribuído(s)</li>
+            <li><strong>{concluido.reentregaPlanilha}</strong> entrou(aram) em reentrega agora</li>
             <li><strong>{concluido.canceladosPlanilha}</strong> cancelado(s) pela planilha</li>
             <li><strong>{concluido.aguardandoCanhoto}</strong> mudou(aram) pra "aguardando canhoto"</li>
             <li><strong>{concluido.protegidos.length}</strong> protegido(s) sem alteração</li>
