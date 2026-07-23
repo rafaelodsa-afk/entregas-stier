@@ -1,6 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { verifyPassword, hashPassword, senhaValida, MENSAGEM_REGRA_SENHA } from "@/lib/auth";
+import {
+  verifyPassword,
+  hashPassword,
+  senhaValida,
+  MENSAGEM_REGRA_SENHA,
+  contaBloqueada,
+  proximoEstadoAposErro,
+  MENSAGEM_CONTA_BLOQUEADA,
+} from "@/lib/auth";
 
 // Troca de senha voluntária, direto na tela de login, sem precisar estar
 // logado. Como não existe recuperação por e-mail, a senha atual é a prova
@@ -35,14 +43,18 @@ export async function POST(req: NextRequest) {
   if (!usuario || !usuario.ativo) {
     return NextResponse.json({ erro: "Usuário ou senha atual inválidos" }, { status: 401 });
   }
+  if (contaBloqueada(usuario)) {
+    return NextResponse.json({ erro: MENSAGEM_CONTA_BLOQUEADA }, { status: 429 });
+  }
   const senhaOk = await verifyPassword(senhaAtual, usuario.senhaHash);
   if (!senhaOk) {
+    await prisma.usuario.update({ where: { id: usuario.id }, data: proximoEstadoAposErro(usuario) });
     return NextResponse.json({ erro: "Usuário ou senha atual inválidos" }, { status: 401 });
   }
 
   await prisma.usuario.update({
     where: { id: usuario.id },
-    data: { senhaHash: await hashPassword(novaSenha), precisaTrocarSenha: false },
+    data: { senhaHash: await hashPassword(novaSenha), precisaTrocarSenha: false, tentativasFalhas: 0, bloqueadoAte: null },
   });
 
   return NextResponse.json({ ok: true });

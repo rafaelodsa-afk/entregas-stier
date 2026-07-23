@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { verifyPassword, signSession, COOKIE_NAME } from "@/lib/auth";
+import {
+  verifyPassword,
+  signSession,
+  COOKIE_NAME,
+  contaBloqueada,
+  proximoEstadoAposErro,
+  MENSAGEM_CONTA_BLOQUEADA,
+} from "@/lib/auth";
 
 export async function POST(req: NextRequest) {
   let body: { username?: string; senha?: string };
@@ -25,9 +32,18 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ erro: "Usuário ou senha inválidos" }, { status: 401 });
   }
 
+  if (contaBloqueada(usuario)) {
+    return NextResponse.json({ erro: MENSAGEM_CONTA_BLOQUEADA }, { status: 429 });
+  }
+
   const senhaOk = await verifyPassword(senha, usuario.senhaHash);
   if (!senhaOk) {
+    await prisma.usuario.update({ where: { id: usuario.id }, data: proximoEstadoAposErro(usuario) });
     return NextResponse.json({ erro: "Usuário ou senha inválidos" }, { status: 401 });
+  }
+
+  if (usuario.tentativasFalhas > 0) {
+    await prisma.usuario.update({ where: { id: usuario.id }, data: { tentativasFalhas: 0, bloqueadoAte: null } });
   }
 
   const token = await signSession({

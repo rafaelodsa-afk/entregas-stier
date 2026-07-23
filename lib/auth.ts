@@ -28,6 +28,32 @@ export type SessionPayload = {
 
 export const MENSAGEM_REGRA_SENHA = "A senha precisa ter pelo menos 4 letras e 4 números";
 
+// Proteção contra força bruta: depois de LIMITE_TENTATIVAS_LOGIN erros
+// seguidos, a conta fica bloqueada por BLOQUEIO_MINUTOS — guardado no
+// próprio usuário (tentativasFalhas/bloqueadoAte), sem precisar de serviço
+// externo. Zera a cada login certo.
+export const LIMITE_TENTATIVAS_LOGIN = 5;
+export const BLOQUEIO_MINUTOS = 15;
+export const MENSAGEM_CONTA_BLOQUEADA = "Muitas tentativas erradas. Tente novamente em alguns minutos.";
+
+export function contaBloqueada(usuario: { bloqueadoAte: Date | null }): boolean {
+  return !!usuario.bloqueadoAte && usuario.bloqueadoAte.getTime() > Date.now();
+}
+
+// Monta o `data` do Prisma pra registrar uma tentativa errada — separado
+// do lugar que efetivamente salva, pra ficar fácil de testar/reusar entre
+// login e troca de senha pública (mesma classe de ataque).
+export function proximoEstadoAposErro(usuario: { tentativasFalhas: number }): {
+  tentativasFalhas: number;
+  bloqueadoAte: Date | null;
+} {
+  const tentativas = usuario.tentativasFalhas + 1;
+  if (tentativas >= LIMITE_TENTATIVAS_LOGIN) {
+    return { tentativasFalhas: 0, bloqueadoAte: new Date(Date.now() + BLOQUEIO_MINUTOS * 60 * 1000) };
+  }
+  return { tentativasFalhas: tentativas, bloqueadoAte: null };
+}
+
 // Regra pedida: no mínimo 4 letras e 4 números (em qualquer ordem/posição).
 export function senhaValida(senha: string): boolean {
   const letras = senha.match(/[a-zA-Z]/g)?.length ?? 0;

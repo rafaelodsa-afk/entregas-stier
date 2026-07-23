@@ -50,6 +50,41 @@ export async function apagarArquivosR2(chaves: string[]): Promise<void> {
   }
 }
 
+// Assinatura binária (primeiros bytes) de cada tipo permitido — confirma que
+// o arquivo é DE VERDADE o que ele diz ser, em vez de confiar só no
+// Content-Type que o navegador declarou no upload (fácil de forjar chamando
+// a API de upload direto, sem passar pela tela).
+const ASSINATURAS: Record<string, (b: Buffer) => boolean> = {
+  "image/jpeg": (b) => b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff,
+  "image/png": (b) => b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47,
+  "image/webp": (b) => b.subarray(0, 4).toString("ascii") === "RIFF" && b.subarray(8, 12).toString("ascii") === "WEBP",
+  "application/pdf": (b) => b.subarray(0, 4).toString("ascii") === "%PDF",
+};
+
+export const TAMANHO_MAXIMO_ARQUIVO = 20 * 1024 * 1024; // 20 MB
+
+// Confere, DEPOIS do upload direto pro R2, se o arquivo é realmente do tipo
+// que foi declarado no presign (pelos primeiros bytes, não pela extensão do
+// nome) e se não passa do tamanho máximo. Chamado antes de aceitar a chave
+// e vincular ao pedido — se falhar, o arquivo é apagado do R2.
+export async function arquivoValido(chave: string): Promise<boolean> {
+  try {
+    const comando = new GetObjectCommand({ Bucket: BUCKET, Key: chave, Range: "bytes=0-15" });
+    const resposta = await client.send(comando);
+    if (!resposta.Body || !resposta.ContentType) return false;
+    // Content-Range vem como "bytes 0-15/<tamanho total>" quando o objeto é
+    // maior que o range pedido — extrai o tamanho total pra checar o limite.
+    const tamanhoTotal = Number(resposta.ContentRange?.split("/")[1] ?? resposta.ContentLength ?? 0);
+    if (tamanhoTotal > TAMANHO_MAXIMO_ARQUIVO) return false;
+    const verificador = ASSINATURAS[resposta.ContentType];
+    if (!verificador) return false;
+    const bytes = Buffer.from(await resposta.Body.transformToByteArray());
+    return verificador(bytes);
+  } catch {
+    return false;
+  }
+}
+
 export type ArquivoR2 = { key: string; size: number; uploadedAt: Date };
 
 export async function listarTodosOsArquivosR2(): Promise<ArquivoR2[]> {

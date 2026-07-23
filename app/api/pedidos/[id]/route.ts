@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { podeVerTudo, podeFinalizarSemCanhoto } from "@/lib/auth";
 import { geraPendenciaFinanceira } from "@/lib/pedidos";
+import { arquivoValido, apagarArquivosR2 } from "@/lib/r2";
 
 // Compara nomes de transportador ignorando maiúsculas/minúsculas e espaços
 // extras — pra um espaço a mais no cadastro não travar o próprio dono do
@@ -67,6 +68,13 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       // planilha não informa operação) E o pagamento for à vista.
       data.statusFinanceiro = geraPendenciaFinanceira(pedido.operacao, pedido.formaPagamento) ? "AGUARDANDO_ACERTO" : "NA";
       if (body.canhotoUrl) {
+        // Confere DE VERDADE o que foi enviado (bytes reais, não só o
+        // Content-Type que o navegador declarou) — só aceita e vincula ao
+        // pedido se bater; senão apaga o que quer que tenha sido enviado.
+        if (!(await arquivoValido(body.canhotoUrl))) {
+          await apagarArquivosR2([body.canhotoUrl]);
+          return NextResponse.json({ erro: "O arquivo enviado não é uma foto ou PDF válido." }, { status: 400 });
+        }
         data.canhotoUrl = body.canhotoUrl;
         data.canhotoTipo = body.canhotoTipo || "foto";
       }
@@ -109,6 +117,10 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       }
       if (!body.comprovanteUrl) {
         return NextResponse.json({ erro: "Envie o comprovante" }, { status: 400 });
+      }
+      if (!(await arquivoValido(body.comprovanteUrl))) {
+        await apagarArquivosR2([body.comprovanteUrl]);
+        return NextResponse.json({ erro: "O arquivo enviado não é uma foto ou PDF válido." }, { status: 400 });
       }
       data.comprovantePagamentoUrl = body.comprovanteUrl;
       data.comprovantePagamentoTipo = body.comprovanteTipo || "foto";

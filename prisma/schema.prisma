@@ -52,6 +52,11 @@ model Usuario {
   ativo             Boolean   @default(true)
   criadoPor         String?
   criadoEm          DateTime  @default(now())
+  // Proteção contra força bruta no login — zera a cada acerto; ao bater o
+  // limite de erros seguidos, bloqueia por um tempo em vez de deixar
+  // tentar pra sempre. Ver LIMITE_TENTATIVAS_LOGIN em lib/auth.ts.
+  tentativasFalhas  Int       @default(0)
+  bloqueadoAte      DateTime?
 
   @@index([papel])
 }
