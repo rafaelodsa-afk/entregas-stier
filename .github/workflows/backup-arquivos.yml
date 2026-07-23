@@ -1,0 +1,44 @@
+name: Backup dos arquivos (canhotos/comprovantes)
+
+# Roda toda semana (domingo de madrugada) e também pode ser disparado
+# manualmente pra testar. Usa "rclone copy" (nunca "sync") de propósito —
+# copy só ADICIONA/atualiza no destino, nunca apaga de lá algo que tenha
+# sumido da origem. É isso que faz esse backup proteger contra exclusão
+# acidental, ao invés de replicar o problema.
+on:
+  schedule:
+    - cron: "0 3 * * 0"
+  workflow_dispatch: {}
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Instalar rclone
+        run: curl https://rclone.org/install.sh | sudo bash
+
+      - name: Configurar as duas contas R2 (origem e backup)
+        run: |
+          mkdir -p ~/.config/rclone
+          cat > ~/.config/rclone/rclone.conf <<EOF
+          [origem]
+          type = s3
+          provider = Cloudflare
+          access_key_id = ${{ secrets.R2_ACCESS_KEY_ID }}
+          secret_access_key = ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          endpoint = ${{ secrets.R2_ENDPOINT }}
+          acl = private
+
+          [backup]
+          type = s3
+          provider = Cloudflare
+          access_key_id = ${{ secrets.R2_BACKUP_ACCESS_KEY_ID }}
+          secret_access_key = ${{ secrets.R2_BACKUP_SECRET_ACCESS_KEY }}
+          endpoint = ${{ secrets.R2_ENDPOINT }}
+          acl = private
+          EOF
+
+      - name: Copiar tudo do bucket principal pro bucket de backup
+        run: |
+          rclone copy "origem:${{ secrets.R2_BUCKET_NAME }}" "backup:${{ secrets.R2_BACKUP_BUCKET_NAME }}/arquivos" \
+            --checksum --transfers 8 --checkers 16 -v
