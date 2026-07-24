@@ -23,7 +23,7 @@ function LuaIcon() {
 
 function aplicarCorDeStatusBar(tema: "light" | "dark") {
   const meta = document.querySelector('meta[name="theme-color"]');
-  if (meta) meta.setAttribute("content", tema === "light" ? "#eef0f3" : "#0b0d0f");
+  if (meta) meta.setAttribute("content", tema === "light" ? "#e4e8ed" : "#0b0d0f");
 }
 
 export default function ThemeToggle({ className = "" }: { className?: string }) {

@@ -10,7 +10,7 @@ import PainelPedidos from "@/components/PainelPedidos";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminDashboard({ searchParams }: { searchParams: { status?: string } }) {
+export default async function AdminDashboard({ searchParams }: { searchParams: { status?: string; alertaProblema?: string } }) {
   const token = cookies().get(COOKIE_NAME)?.value;
   const sessao = token ? await verifySession(token) : null;
   if (!sessao || !podeVerTudo(sessao.papel)) redirect("/login");
@@ -31,6 +31,8 @@ export default async function AdminDashboard({ searchParams }: { searchParams: {
       operacao: true,
       formaPagamento: true,
       dataPedido: true,
+      alertaProblema: true,
+      alertaProblemaObservacao: true,
     },
   });
   const transportadores = [...new Set(pedidos.map((p) => p.transportador))].sort();
@@ -43,6 +45,7 @@ export default async function AdminDashboard({ searchParams }: { searchParams: {
         transportadores={transportadores}
         podeFinalizarLegado={podeFinalizarSemCanhoto(sessao.papel)}
         statusInicial={searchParams.status}
+        apenasAlertaProblema={searchParams.alertaProblema === "1"}
         pedidos={pedidosComLinks.map((p) => ({
           id: p.id,
           cliente: p.cliente,
@@ -56,6 +59,8 @@ export default async function AdminDashboard({ searchParams }: { searchParams: {
           finalizadoSemCanhoto: p.finalizadoSemCanhoto,
           mostraIconeDinheiro: geraPendenciaFinanceira(p.operacao, p.formaPagamento),
           dataPedido: p.dataPedido,
+          alertaProblema: p.alertaProblema,
+          alertaProblemaObservacao: p.alertaProblemaObservacao,
         }))}
       >
         <ImportarPlanilha />

@@ -83,6 +83,12 @@ export default async function DetalhePedidoPage({ params }: { params: { id: stri
           {pedido.observacaoProblema && (
             <div><span className="muted">Observação</span><div>{pedido.observacaoProblema}</div></div>
           )}
+          {pedido.alertaProblemaObservacao && (
+            <div>
+              <span className="muted">Problema sinalizado pelo transportador {pedido.alertaProblema ? "(ativo)" : "(resolvido)"}</span>
+              <div>{pedido.alertaProblemaObservacao}</div>
+            </div>
+          )}
           {pedido.finalizadoSemCanhoto && (
             <div><span className="muted">Justificativa (sem comprovante)</span><div>{pedido.justificativaSemCanhoto}</div></div>
           )}

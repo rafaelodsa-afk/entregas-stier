@@ -4,6 +4,9 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import PedidoAcoes, { BadgeStatus, LABEL_STATUS, enviarAcao } from "@/components/PedidoAcoes";
 import IconeDinheiro from "@/components/IconeDinheiro";
+import FiltroPeriodo from "@/components/FiltroPeriodo";
+import { dataNoIntervalo } from "@/lib/filtroPeriodo";
+import { formatarDataPura } from "@/lib/formatarData";
 
 type Pedido = {
   id: string;
@@ -20,6 +23,8 @@ type Pedido = {
   comprovantePagamentoUrl: string | null;
   finalizadoSemCanhoto: boolean;
   mostraIconeDinheiro: boolean;
+  dataPedido: Date | null;
+  alertaProblema: boolean;
 };
 
 // Únicos status em que uma ação em lote se aplica — nunca leva um pedido
@@ -33,6 +38,8 @@ export default function ListaPedidosOperador({ pedidos }: { pedidos: Pedido[] })
   const router = useRouter();
   const [busca, setBusca] = useState("");
   const [statusFiltro, setStatusFiltro] = useState("");
+  const [dataInicial, setDataInicial] = useState("");
+  const [dataFinal, setDataFinal] = useState("");
   const [selecionados, setSelecionados] = useState<Set<string>>(new Set());
   const [processando, setProcessando] = useState(false);
   const [erroLote, setErroLote] = useState("");
@@ -40,6 +47,7 @@ export default function ListaPedidosOperador({ pedidos }: { pedidos: Pedido[] })
   const buscaNormalizada = busca.trim().toLowerCase();
   const filtrados = pedidos.filter((p) => {
     if (statusFiltro && p.statusEntrega !== statusFiltro) return false;
+    if (!dataNoIntervalo(p.dataPedido, dataInicial, dataFinal)) return false;
     if (buscaNormalizada) {
       const alvo = `${p.id} ${p.cliente}`.toLowerCase();
       if (!alvo.includes(buscaNormalizada)) return false;
@@ -111,6 +119,7 @@ export default function ListaPedidosOperador({ pedidos }: { pedidos: Pedido[] })
             </option>
           ))}
         </select>
+        <FiltroPeriodo dataInicial={dataInicial} dataFinal={dataFinal} onChangeInicial={setDataInicial} onChangeFinal={setDataFinal} />
       </div>
 
       {(aguardandoAceite.length > 0 || aguardandoCarregamento.length > 0) && (
@@ -191,6 +200,7 @@ export default function ListaPedidosOperador({ pedidos }: { pedidos: Pedido[] })
             </div>
             <div className="pedido-cliente">{p.cliente}</div>
             <div className="pedido-endereco">{p.rua}, {p.numero} — {p.bairro}, {p.cidade}</div>
+            <div className="muted" style={{ marginBottom: 10 }}>Data do pedido: {formatarDataPura(p.dataPedido)}</div>
             <PedidoAcoes pedido={p} />
           </div>
         ))}

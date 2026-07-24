@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { comprimirImagem } from "@/lib/comprimirImagem";
 import { enviarArquivoParaR2 } from "@/lib/uploadR2Client";
 import { formatarDataPura } from "@/lib/formatarData";
+import AcertoSplit from "@/components/AcertoSplit";
 
 type PedidoAberto = {
   id: string;
@@ -107,6 +108,10 @@ export default function FinanceiroTabela({ pedidos }: { pedidos: PedidoAberto[] 
           <div className="kpi-value">{formatarValor(total)}</div>
           <div className="kpi-label">Total aguardando acerto ({lista.length} pedido(s))</div>
         </div>
+      </div>
+
+      <div style={{ marginTop: 12 }}>
+        <AcertoSplit pedidos={lista} />
       </div>
 
       {erro && <p className="erro" style={{ marginTop: 10 }}>{erro}</p>}

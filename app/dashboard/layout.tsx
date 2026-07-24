@@ -9,6 +9,7 @@ import AlterarMinhaSenha from "@/components/AlterarMinhaSenha";
 import RefreshButton from "@/components/RefreshButton";
 import ThemeToggle from "@/components/ThemeToggle";
 import AlertaReentrega from "@/components/AlertaReentrega";
+import AlertaProblema from "@/components/AlertaProblema";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const token = cookies().get(COOKIE_NAME)?.value;
@@ -16,9 +17,12 @@ export default async function DashboardLayout({ children }: { children: React.Re
   if (!sessao) redirect("/login");
 
   const podeVerAlerta = podeVerTudo(sessao.papel);
-  const reentregasPendentes = podeVerAlerta
-    ? await prisma.pedido.count({ where: { statusEntrega: "REENTREGA" } })
-    : 0;
+  const [reentregasPendentes, pedidosComAlertaProblema] = podeVerAlerta
+    ? await Promise.all([
+        prisma.pedido.count({ where: { statusEntrega: "REENTREGA" } }),
+        prisma.pedido.count({ where: { alertaProblema: true } }),
+      ])
+    : [0, 0];
 
   const abas = [];
   if (podeVerTudo(sessao.papel)) {
@@ -30,12 +34,16 @@ export default async function DashboardLayout({ children }: { children: React.Re
   if (podeGerenciarUsuariosPorPapel(sessao.papel, sessao.podeCriarUsuarios)) {
     abas.push({ href: "/dashboard/admin/usuarios", label: "Usuários" });
   }
+  if (sessao.papel === "TRANSPORTADOR") {
+    abas.push({ href: "/dashboard/operador", label: "Pedidos" });
+    abas.push({ href: "/dashboard/operador/painel", label: "Painel" });
+  }
 
   return (
     <div className="app-shell">
       <header className="topbar">
         <span className="brand">
-          <Image src="/logo-stier.png" alt="Stier" width={700} height={160} priority />
+          <Image src="/logo-stier.png" alt="Stier" width={700} height={160} priority className="logo-adaptavel" />
           <span className="brand-texto">Controle de Entregas</span>
         </span>
         <div className="user-info">
@@ -48,6 +56,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       </header>
       {abas.length > 0 && <NavTabs abas={abas} />}
       {podeVerAlerta && <AlertaReentrega quantidade={reentregasPendentes} />}
+      {podeVerAlerta && <AlertaProblema quantidade={pedidosComAlertaProblema} />}
       {sessao.papel === "ANALISTA" && (
         <div className="somente-leitura-aviso">
           Acesso de analista — vê e atualiza pedidos normalmente; só não gerencia usuários.

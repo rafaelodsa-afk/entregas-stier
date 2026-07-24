@@ -16,6 +16,7 @@ type Pedido = {
   canhotoUrl?: string | null;
   comprovantePagamentoUrl?: string | null;
   finalizadoSemCanhoto?: boolean;
+  alertaProblema?: boolean;
 };
 
 // Só não dá pra anexar canhoto quando o pedido já chegou num desses estados finais.
@@ -131,6 +132,18 @@ export default function PedidoAcoes({
     }
   }
 
+  async function sinalizarProblema() {
+    const observacao = window.prompt(
+      "Descreva o problema (obrigatório) — isso é só um alerta, não muda o status do pedido:"
+    );
+    if (observacao === null) return;
+    if (!observacao.trim()) {
+      setErro("Descreva o problema pra sinalizar.");
+      return;
+    }
+    await acaoSimples({ acao: "sinalizarProblema", observacao: observacao.trim() });
+  }
+
   async function finalizarSemComprovante() {
     const justificativa = window.prompt(
       'Justificativa (obrigatória) — ex: "Pedido anterior à implantação do sistema":',
@@ -147,7 +160,10 @@ export default function PedidoAcoes({
     await acaoSimples({ acao: "finalizarSemComprovante", justificativa: justificativa.trim() });
   }
 
-  const podeAnexarCanhoto = !STATUS_SEM_CANHOTO.includes(pedido.statusEntrega);
+  // Além dos status finais, também não dá pra anexar canhoto antes do
+  // transportador aceitar o pedido — a API bloqueia isso de verdade também.
+  const podeAnexarCanhoto =
+    pedido.statusEntrega !== "AGUARDANDO_ACEITE" && !STATUS_SEM_CANHOTO.includes(pedido.statusEntrega);
   const podeAnexarComprovante = pedido.statusFinanceiro === "AGUARDANDO_ACERTO";
 
   const blocoCanhoto = podeAnexarCanhoto ? (
@@ -269,6 +285,15 @@ export default function PedidoAcoes({
       {linkCanhoto}
       {blocoComprovante}
       {linkComprovante}
+      {!STATUS_SEM_CANHOTO.includes(pedido.statusEntrega) && (
+        pedido.alertaProblema ? (
+          <span className="muted" style={{ alignSelf: "center" }}>Problema sinalizado — aguardando revisão da Stier</span>
+        ) : (
+          <button className="btn-legado" disabled={carregando} onClick={sinalizarProblema}>
+            Sinalizar problema
+          </button>
+        )
+      )}
       {erro && <p className="erro" style={{ marginTop: 6, width: "100%" }}>{erro}</p>}
     </div>
   );

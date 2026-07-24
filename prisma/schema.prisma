@@ -79,6 +79,12 @@ model Pedido {
   statusPlanilha     String? // último status reportado pela planilha, só informativo — nunca decide o statusEntrega sozinho
   statusFinanceiro   StatusFinanceiro  @default(NA)
   observacaoProblema String?
+  // "Sinalizar problema" — diferente do reportarProblema acima: é só um
+  // alerta com observação, não muda statusEntrega. alertaProblema controla
+  // se ainda está pendente de revisão; a observação nunca é apagada, mesmo
+  // depois de resolvido, pra ficar no histórico permanente do pedido.
+  alertaProblema           Boolean @default(false)
+  alertaProblemaObservacao String?
   canhotoUrl         String?
   canhotoTipo        String?
   comprovantePagamentoUrl  String?
@@ -99,6 +105,7 @@ model Pedido {
   @@index([transportador])
   @@index([statusEntrega])
   @@index([statusFinanceiro])
+  @@index([alertaProblema])
 }
 
 model HistoricoPedido {

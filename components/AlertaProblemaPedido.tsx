@@ -1,0 +1,77 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+
+export default function AlertaProblemaPedido({
+  pedidoId,
+  ativo,
+  observacao,
+}: {
+  pedidoId: string;
+  ativo: boolean;
+  observacao: string | null;
+}) {
+  const [aberto, setAberto] = useState(false);
+  const [carregando, setCarregando] = useState(false);
+  const [erro, setErro] = useState("");
+  const router = useRouter();
+
+  if (!observacao) return null;
+
+  async function resolver() {
+    setCarregando(true);
+    setErro("");
+    try {
+      const res = await fetch(`/api/pedidos/${pedidoId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ acao: "resolverAlertaProblema" }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setErro(data.erro || "Não foi possível resolver o alerta.");
+        return;
+      }
+      setAberto(false);
+      router.refresh();
+    } catch {
+      setErro("Erro de conexão.");
+    } finally {
+      setCarregando(false);
+    }
+  }
+
+  return (
+    <span style={{ position: "relative", display: "inline-block" }}>
+      <button
+        type="button"
+        className="btn-ghost"
+        style={{
+          padding: "3px 7px",
+          marginLeft: 6,
+          color: ativo ? "var(--orange)" : "var(--muted)",
+          borderColor: ativo ? "rgba(240, 136, 62, 0.4)" : undefined,
+        }}
+        title={ativo ? "Problema sinalizado pelo transportador — clique pra ver" : "Alerta resolvido — clique pra ver a observação"}
+        onClick={() => setAberto((a) => !a)}
+      >
+        !
+      </button>
+      {aberto && (
+        <div className="filtro-multiplo-painel" style={{ width: 260, padding: 12 }}>
+          <p className="muted" style={{ margin: "0 0 4px", fontSize: 11, textTransform: "uppercase" }}>
+            {ativo ? "Problema sinalizado" : "Observação (resolvido)"}
+          </p>
+          <p style={{ margin: "0 0 10px", fontSize: 13 }}>{observacao}</p>
+          {erro && <p className="erro" style={{ marginBottom: 8 }}>{erro}</p>}
+          {ativo && (
+            <button disabled={carregando} onClick={resolver} style={{ fontSize: 12 }}>
+              {carregando ? "..." : "Marcar como resolvido"}
+            </button>
+          )}
+        </div>
+      )}
+    </span>
+  );
+}

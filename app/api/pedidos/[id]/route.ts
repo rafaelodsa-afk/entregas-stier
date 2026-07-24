@@ -75,6 +75,11 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       break;
     }
     case "finalizarEntrega": {
+      // Só pode finalizar depois que o transportador aceitou o pedido —
+      // sem isso não faz sentido ter canhoto de uma entrega que nem começou.
+      if (pedido.statusEntrega === "AGUARDANDO_ACEITE") {
+        return NextResponse.json({ erro: "Este pedido ainda não foi aceito" }, { status: 400 });
+      }
       // Canhoto é obrigatório de verdade aqui (não só na tela) — sem isso
       // não tem como provar que o pedido foi entregue.
       if (!body.canhotoUrl) {
@@ -141,6 +146,29 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       data.comprovantePagamentoUrl = body.comprovanteUrl;
       data.comprovantePagamentoTipo = body.comprovanteTipo || "foto";
       statusParaHistorico = "Comprovante de pagamento anexado";
+      break;
+    }
+    case "sinalizarProblema": {
+      // Só um alerta com observação — nunca mexe no statusEntrega, o pedido
+      // segue o fluxo normal (aceitar, iniciar rota, canhoto, etc.) mesmo
+      // com o alerta ativo.
+      const observacao = String(body.observacao ?? "").trim();
+      if (!observacao) {
+        return NextResponse.json({ erro: "Descreva o problema" }, { status: 400 });
+      }
+      data.alertaProblema = true;
+      data.alertaProblemaObservacao = observacao;
+      statusParaHistorico = `Problema sinalizado pelo transportador: ${observacao}`;
+      break;
+    }
+    case "resolverAlertaProblema": {
+      if (!podeVerTudo(papel)) {
+        return NextResponse.json({ erro: "Sem permissão para resolver o alerta" }, { status: 403 });
+      }
+      // A observação em si NUNCA é apagada — só para de contar como
+      // pendente. Continua visível pra sempre no detalhe do pedido.
+      data.alertaProblema = false;
+      statusParaHistorico = "Alerta de problema marcado como resolvido";
       break;
     }
     case "confirmarAcerto": {

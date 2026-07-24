@@ -40,6 +40,8 @@ export default async function OperadorDashboard() {
       finalizadoSemCanhoto: true,
       operacao: true,
       formaPagamento: true,
+      dataPedido: true,
+      alertaProblema: true,
     },
   });
   const pendentes = pedidos.filter((p) => !["ENTREGUE", "CANCELADO", "DEVOLVIDO"].includes(p.statusEntrega));
@@ -66,6 +68,8 @@ export default async function OperadorDashboard() {
           comprovantePagamentoUrl: p.comprovantePagamentoUrl,
           finalizadoSemCanhoto: p.finalizadoSemCanhoto,
           mostraIconeDinheiro: geraPendenciaFinanceira(p.operacao, p.formaPagamento),
+          dataPedido: p.dataPedido,
+          alertaProblema: p.alertaProblema,
         }))}
       />
     </div>

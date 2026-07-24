@@ -7,30 +7,10 @@ import GraficoDonut from "@/components/GraficoDonut";
 import GraficoBarras from "@/components/GraficoBarras";
 import MapaEntregasClient from "@/components/MapaEntregasClient";
 import FiltroTransportador from "@/components/FiltroTransportador";
+import AcertoSplit from "@/components/AcertoSplit";
+import { LABEL_STATUS, COR_STATUS } from "@/lib/statusLabels";
 
 export const dynamic = "force-dynamic";
-
-const LABEL_STATUS: Record<string, string> = {
-  AGUARDANDO_ACEITE: "Aguardando aceite",
-  AGUARDANDO_CARREGAMENTO: "Aguardando carregamento",
-  EM_ROTA: "Em rota de entrega",
-  AGUARDANDO_CANHOTO: "Entregue (planilha) — aguardando canhoto",
-  ENTREGUE: "Entregue",
-  REENTREGA: "Reentrega",
-  CANCELADO: "Cancelado",
-  DEVOLVIDO: "Devolvido",
-};
-
-const COR_STATUS: Record<string, string> = {
-  AGUARDANDO_ACEITE: "#e3a73e",
-  AGUARDANDO_CARREGAMENTO: "#f0883e",
-  EM_ROTA: "#4e8fe3",
-  AGUARDANDO_CANHOTO: "#e35c9e",
-  ENTREGUE: "#3fbf8f",
-  REENTREGA: "#a78bfa",
-  CANCELADO: "#e15c4a",
-  DEVOLVIDO: "#8d95a1",
-};
 
 const CORES_TRANSPORTADOR = ["#e3a73e", "#4e8fe3", "#3fbf8f", "#a78bfa", "#f0883e", "#e15c4a", "#8d95a1"];
 
@@ -69,6 +49,8 @@ export default async function GraficosPage({
     }))
     .sort((a, b) => b.valor - a.valor);
 
+  const aguardandoAcerto = pedidos.filter((p) => p.statusFinanceiro === "AGUARDANDO_ACERTO");
+
   const pendentes = pedidos.filter((p) => !["ENTREGUE", "CANCELADO", "DEVOLVIDO", "REENTREGA"].includes(p.statusEntrega));
   const cidadesPendentes = pendentes.map((p) => p.cidade).filter(Boolean);
   const coordenadas = await obterCoordenadasDasCidades(cidadesPendentes);
@@ -94,6 +76,10 @@ export default async function GraficosPage({
         <div className="form-card">
           <h2>Pedidos por transportador</h2>
           <GraficoBarras dados={porTransportador} destaque={filtroTransportador} />
+        </div>
+        <div className="form-card">
+          <h2>Aguardando acerto{filtroTransportador ? ` — ${filtroTransportador}` : ""}</h2>
+          <AcertoSplit pedidos={aguardandoAcerto} mostrarGrafico />
         </div>
       </div>
 

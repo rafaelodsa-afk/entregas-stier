@@ -34,7 +34,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             carregamento. Escuro continua sendo o padrão pra quem nunca
             escolheu nada. */}
         <Script id="tema-inicial" strategy="beforeInteractive">
-          {`(function(){try{var t=localStorage.getItem('stier-theme');if(t==='light'){document.documentElement.setAttribute('data-theme','light');var m=document.querySelector('meta[name="theme-color"]');if(m)m.setAttribute('content','#eef0f3');}}catch(e){}})();`}
+          {`(function(){try{var t=localStorage.getItem('stier-theme');if(t==='light'){document.documentElement.setAttribute('data-theme','light');var m=document.querySelector('meta[name="theme-color"]');if(m)m.setAttribute('content','#e4e8ed');}}catch(e){}})();`}
         </Script>
       </head>
       <body>{children}</body>

@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import TabelaPedidos from "@/components/TabelaPedidos";
 import FiltroMultiplo from "@/components/FiltroMultiplo";
 import FiltroPeriodo from "@/components/FiltroPeriodo";
@@ -22,6 +23,8 @@ type Pedido = {
   finalizadoSemCanhoto: boolean;
   mostraIconeDinheiro: boolean;
   dataPedido: Date | null;
+  alertaProblema: boolean;
+  alertaProblemaObservacao: string | null;
 };
 
 const OPCOES_STATUS = Object.entries(LABEL_STATUS).map(([valor, rotulo]) => ({ valor, rotulo }));
@@ -31,12 +34,14 @@ export default function PainelPedidos({
   transportadores,
   podeFinalizarLegado = false,
   statusInicial,
+  apenasAlertaProblema = false,
   children,
 }: {
   pedidos: Pedido[];
   transportadores: string[];
   podeFinalizarLegado?: boolean;
   statusInicial?: string;
+  apenasAlertaProblema?: boolean;
   children?: React.ReactNode;
 }) {
   const router = useRouter();
@@ -59,6 +64,7 @@ export default function PainelPedidos({
 
   const buscaNormalizada = busca.trim().toLowerCase();
   const filtrados = pedidos.filter((p) => {
+    if (apenasAlertaProblema && !p.alertaProblema) return false;
     if (statusFiltro.size > 0 && !statusFiltro.has(p.statusEntrega)) return false;
     if (transportadorFiltro.size > 0 && !transportadorFiltro.has(p.transportador)) return false;
     if (!dataNoIntervalo(p.dataPedido, dataInicial, dataFinal)) return false;
@@ -158,6 +164,12 @@ export default function PainelPedidos({
 
   return (
     <div>
+      {apenasAlertaProblema && (
+        <div className="somente-leitura-aviso">
+          Mostrando só pedidos com problema sinalizado pelo transportador.
+          <Link href="/dashboard/admin" className="link-botao" style={{ marginLeft: 6 }}>Limpar filtro</Link>
+        </div>
+      )}
       <div className="kpi-grid">
         <div className="kpi-card">
           <div className="kpi-value">{filtrados.length}</div>

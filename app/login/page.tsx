@@ -8,7 +8,7 @@ import ThemeToggle from "@/components/ThemeToggle";
 function Logo() {
   return (
     <div className="login-logo">
-      <Image src="/logo-stier.png" alt="Stier" width={700} height={160} priority />
+      <Image src="/logo-stier.png" alt="Stier" width={700} height={160} priority className="logo-adaptavel" />
     </div>
   );
 }
@@ -122,7 +122,7 @@ function FormularioTrocarSenha({ onVoltar }: { onVoltar: () => void }) {
       <Logo />
       <p className="login-sub">Trocar senha — informe seu usuário e senha atual pra provar que é você.</p>
       {erro && <p className="erro">{erro}</p>}
-      {sucesso && <p className="erro" style={{ background: "rgba(63,191,143,0.12)", borderColor: "rgba(63,191,143,0.4)", color: "#8fe3c4" }}>Senha trocada com sucesso! Já pode entrar com a nova senha.</p>}
+      {sucesso && <p className="erro" style={{ background: "rgba(63,191,143,0.12)", borderColor: "rgba(63,191,143,0.4)", color: "var(--teal)" }}>Senha trocada com sucesso! Já pode entrar com a nova senha.</p>}
       <label>
         Usuário
         <input value={username} onChange={(e) => setUsername(e.target.value)} autoCapitalize="none" autoFocus />

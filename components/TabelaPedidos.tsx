@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import PedidoAcoes, { BadgeStatus } from "@/components/PedidoAcoes";
 import IconeDinheiro from "@/components/IconeDinheiro";
+import AlertaProblemaPedido from "@/components/AlertaProblemaPedido";
 
 type Pedido = {
   id: string;
@@ -18,6 +19,8 @@ type Pedido = {
   comprovantePagamentoUrl: string | null;
   finalizadoSemCanhoto: boolean;
   mostraIconeDinheiro: boolean;
+  alertaProblema: boolean;
+  alertaProblemaObservacao: string | null;
 };
 
 // Componente só de apresentação — recebe a lista já filtrada (busca +
@@ -103,6 +106,7 @@ export default function TabelaPedidos({
                 <td>
                   <BadgeStatus status={p.statusEntrega} statusPlanilha={p.statusPlanilha} finalizadoSemCanhoto={p.finalizadoSemCanhoto} />
                   {p.mostraIconeDinheiro && <IconeDinheiro />}
+                  <AlertaProblemaPedido pedidoId={p.id} ativo={p.alertaProblema} observacao={p.alertaProblemaObservacao} />
                 </td>
                 <td>{p.statusFinanceiro === "AGUARDANDO_ACERTO" ? <span className="badge badge-acerto">Aguardando acerto</span> : "—"}</td>
                 <td>{p.valorPedido.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</td>
