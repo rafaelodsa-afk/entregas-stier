@@ -7,10 +7,12 @@ export default function AlertaProblemaPedido({
   pedidoId,
   ativo,
   observacao,
+  podeResolver = false,
 }: {
   pedidoId: string;
   ativo: boolean;
   observacao: string | null;
+  podeResolver?: boolean;
 }) {
   const [aberto, setAberto] = useState(false);
   const [carregando, setCarregando] = useState(false);
@@ -43,7 +45,7 @@ export default function AlertaProblemaPedido({
   }
 
   return (
-    <span style={{ position: "relative", display: "inline-block" }}>
+    <>
       <button
         type="button"
         className="btn-ghost"
@@ -54,24 +56,37 @@ export default function AlertaProblemaPedido({
           borderColor: ativo ? "rgba(240, 136, 62, 0.4)" : undefined,
         }}
         title={ativo ? "Problema sinalizado pelo transportador — clique pra ver" : "Alerta resolvido — clique pra ver a observação"}
-        onClick={() => setAberto((a) => !a)}
+        onClick={() => setAberto(true)}
       >
         !
       </button>
       {aberto && (
-        <div className="filtro-multiplo-painel" style={{ width: 260, padding: 12 }}>
-          <p className="muted" style={{ margin: "0 0 4px", fontSize: 11, textTransform: "uppercase" }}>
-            {ativo ? "Problema sinalizado" : "Observação (resolvido)"}
-          </p>
-          <p style={{ margin: "0 0 10px", fontSize: 13 }}>{observacao}</p>
-          {erro && <p className="erro" style={{ marginBottom: 8 }}>{erro}</p>}
-          {ativo && (
-            <button disabled={carregando} onClick={resolver} style={{ fontSize: 12 }}>
-              {carregando ? "..." : "Marcar como resolvido"}
-            </button>
-          )}
+        // Modal centralizado (em vez de um dropdown ancorado no botão) pra
+        // nunca ficar cortado por outras linhas da tabela, não importa a
+        // posição do pedido na lista.
+        <div
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}
+          onClick={() => setAberto(false)}
+        >
+          <div className="form-card" style={{ maxWidth: 360, width: "100%", margin: 0 }} onClick={(e) => e.stopPropagation()}>
+            <p className="muted" style={{ margin: "0 0 4px", fontSize: 11, textTransform: "uppercase" }}>
+              {ativo ? "Problema sinalizado" : "Observação (resolvido)"}
+            </p>
+            <p style={{ margin: "0 0 14px", fontSize: 13.5 }}>{observacao}</p>
+            {erro && <p className="erro" style={{ marginBottom: 10 }}>{erro}</p>}
+            <div className="acoes-linha">
+              {ativo && podeResolver && (
+                <button disabled={carregando} onClick={resolver}>
+                  {carregando ? "..." : "Marcar como resolvido"}
+                </button>
+              )}
+              <button type="button" className="btn-ghost" onClick={() => setAberto(false)}>
+                Fechar
+              </button>
+            </div>
+          </div>
         </div>
       )}
-    </span>
+    </>
   );
 }

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { comprimirImagem } from "@/lib/comprimirImagem";
 import { enviarArquivoParaR2 } from "@/lib/uploadR2Client";
 import { LABEL_STATUS, CLASSE_BADGE } from "@/lib/statusLabels";
+import AlertaProblemaPedido from "@/components/AlertaProblemaPedido";
 
 export { LABEL_STATUS };
 
@@ -17,6 +18,7 @@ type Pedido = {
   comprovantePagamentoUrl?: string | null;
   finalizadoSemCanhoto?: boolean;
   alertaProblema?: boolean;
+  alertaProblemaObservacao?: string | null;
 };
 
 // Só não dá pra anexar canhoto quando o pedido já chegou num desses estados finais.
@@ -132,7 +134,7 @@ export default function PedidoAcoes({
     }
   }
 
-  async function sinalizarProblema() {
+  async function relatarProblema() {
     const observacao = window.prompt(
       "Descreva o problema (obrigatório) — isso é só um alerta, não muda o status do pedido:"
     );
@@ -287,10 +289,13 @@ export default function PedidoAcoes({
       {linkComprovante}
       {!STATUS_SEM_CANHOTO.includes(pedido.statusEntrega) && (
         pedido.alertaProblema ? (
-          <span className="muted" style={{ alignSelf: "center" }}>Problema sinalizado — aguardando revisão da Stier</span>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+            <span className="muted">Problema sinalizado — aguardando revisão da Stier</span>
+            <AlertaProblemaPedido pedidoId={pedido.id} ativo={pedido.alertaProblema} observacao={pedido.alertaProblemaObservacao ?? null} />
+          </span>
         ) : (
-          <button className="btn-legado" disabled={carregando} onClick={sinalizarProblema}>
-            Sinalizar problema
+          <button className="btn-legado" disabled={carregando} onClick={relatarProblema}>
+            Relatar problema
           </button>
         )
       )}

@@ -25,6 +25,7 @@ type Pedido = {
   mostraIconeDinheiro: boolean;
   dataPedido: Date | null;
   alertaProblema: boolean;
+  alertaProblemaObservacao: string | null;
 };
 
 // Únicos status em que uma ação em lote se aplica — nunca leva um pedido

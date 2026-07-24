@@ -106,7 +106,7 @@ export default function TabelaPedidos({
                 <td>
                   <BadgeStatus status={p.statusEntrega} statusPlanilha={p.statusPlanilha} finalizadoSemCanhoto={p.finalizadoSemCanhoto} />
                   {p.mostraIconeDinheiro && <IconeDinheiro />}
-                  <AlertaProblemaPedido pedidoId={p.id} ativo={p.alertaProblema} observacao={p.alertaProblemaObservacao} />
+                  <AlertaProblemaPedido pedidoId={p.id} ativo={p.alertaProblema} observacao={p.alertaProblemaObservacao} podeResolver />
                 </td>
                 <td>{p.statusFinanceiro === "AGUARDANDO_ACERTO" ? <span className="badge badge-acerto">Aguardando acerto</span> : "—"}</td>
                 <td>{p.valorPedido.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</td>
