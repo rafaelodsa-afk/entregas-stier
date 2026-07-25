@@ -7,6 +7,16 @@ import { enviarArquivoParaR2 } from "@/lib/uploadR2Client";
 import { LABEL_STATUS, CLASSE_BADGE } from "@/lib/statusLabels";
 import AlertaProblemaPedido from "@/components/AlertaProblemaPedido";
 
+function IconeAlertaTriangulo() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
+      <path d="M12 9v4" />
+      <path d="M12 17h.01" />
+    </svg>
+  );
+}
+
 export { LABEL_STATUS };
 
 type Pedido = {
@@ -294,8 +304,9 @@ export default function PedidoAcoes({
             <AlertaProblemaPedido pedidoId={pedido.id} ativo={pedido.alertaProblema} observacao={pedido.alertaProblemaObservacao ?? null} />
           </span>
         ) : (
-          <button className="btn-legado" disabled={carregando} onClick={relatarProblema}>
-            Relatar problema
+          <button className="btn-relatar-problema" disabled={carregando} onClick={relatarProblema}>
+            Reportar problema
+            <IconeAlertaTriangulo />
           </button>
         )
       )}

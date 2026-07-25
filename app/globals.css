@@ -457,6 +457,23 @@ button {
   cursor: default;
   flex-shrink: 0;
 }
+.btn-relatar-problema {
+  background: none !important;
+  border: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--orange) !important;
+  font-weight: 700;
+  font-size: 13px;
+  text-decoration: underline;
+  padding: 4px 0 !important;
+  cursor: pointer;
+}
+.btn-relatar-problema:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
 .btn-legado {
   background: transparent !important;
   border: 1px solid var(--orange);
