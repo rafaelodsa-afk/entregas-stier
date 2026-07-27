@@ -570,27 +570,32 @@ export async function processarImportacao(
     resultados.push({ linha: linha.linha, id, classificacao: "sem_mudanca_operacional" });
   }
 
-  // Executa tudo em lote, dentro de UMA transação (o lote inteiro grava por
-  // completo ou nada é aplicado) — createMany pros pedidos novos, não
-  // importa quantos, é uma única ida ao banco; as atualizações (que têm
-  // dados diferentes linha a linha, não dá pra usar updateMany) rodam
-  // dentro da mesma transação, o que já evita boa parte do custo de conexão
-  // que tornava a versão sequencial lenta.
-  if (gravar && (paraCriar.length > 0 || paraAtualizar.length > 0 || historicos.length > 0)) {
-    await prisma.$transaction(
-      async (tx) => {
-        if (paraCriar.length > 0) {
-          await tx.pedido.createMany({ data: paraCriar });
-        }
-        for (const op of paraAtualizar) {
-          await tx.pedido.update({ where: { id: op.id }, data: op.data });
-        }
-        if (historicos.length > 0) {
-          await tx.historicoPedido.createMany({ data: historicos });
-        }
-      },
-      { timeout: 55000, maxWait: 10000 }
-    );
+  // Executa tudo em lote — createMany pros pedidos novos, não importa
+  // quantos, é uma única ida ao banco; o mesmo vale pro histórico. As
+  // atualizações (dados diferentes linha a linha, não dá pra usar
+  // updateMany) continuam uma de cada vez, mas já sem a leitura prévia por
+  // linha (essa parte já foi resolvida pelo findMany em lote acima).
+  //
+  // Importante: NÃO envolve tudo isso numa transação interativa
+  // (`$transaction(async (tx) => ...)`) — o banco (Neon) é acessado por uma
+  // conexão com pooler (pgbouncer), que pode trocar a conexão física entre
+  // uma instrução e outra. Numa transação interativa longa (muitas
+  // atualizações em sequência), isso derruba a transação no meio com
+  // "Transaction not found" — foi exatamente o erro que apareceu num lote
+  // com muitas atualizações. Sem a transação, cada operação é independente
+  // e não depende de manter a mesma conexão do início ao fim; se uma falhar
+  // no meio, reimportar a mesma planilha continua seguro (nada duplica,
+  // graças à checagem por nº de pedido).
+  if (gravar) {
+    if (paraCriar.length > 0) {
+      await prisma.pedido.createMany({ data: paraCriar });
+    }
+    for (const op of paraAtualizar) {
+      await prisma.pedido.update({ where: { id: op.id }, data: op.data });
+    }
+    if (historicos.length > 0) {
+      await prisma.historicoPedido.createMany({ data: historicos });
+    }
   }
 
   return resultados;
