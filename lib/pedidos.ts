@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { Prisma } from "@prisma/client";
 import { LABEL_STATUS } from "@/lib/statusLabels";
 
 export type LinhaPedido = {
@@ -366,6 +367,19 @@ export async function processarImportacao(
   }
 
   const paraCriar: any[] = [];
+  // A esmagadora maioria das atualizações numa reimportação do dia a dia é
+  // só isso: pedido já existe e nada operacional muda, só o texto
+  // informativo da planilha é atualizado (protegido/sem-mudança). Como
+  // updateMany não aceita valores diferentes por linha, mas TODAS essas
+  // linhas mexem exatamente no mesmo único campo, elas vão pra um buffer
+  // separado e são gravadas num UPDATE só (SQL bruto com VALUES), em vez de
+  // uma chamada por linha — é essa gravação, não a criação, que domina o
+  // tempo numa planilha operacional grande.
+  const paraAtualizarSomenteStatusPlanilha: { id: string; statusPlanilha: string }[] = [];
+  // Atualizações "de verdade" (reatribuição, cancelamento, reentrega,
+  // aguardando canhoto) mexem em vários campos diferentes por linha — bem
+  // mais raras numa reimportação do dia a dia, então continuam uma de cada
+  // vez.
   const paraAtualizar: { id: string; data: Record<string, any> }[] = [];
   const historicos: { pedidoId: string; status: string; usuario: string; data: Date }[] = [];
 
@@ -373,7 +387,13 @@ export async function processarImportacao(
     if (gravar) paraCriar.push({ id, dataCriacao: proximoInstante(), ...data });
   }
   function planejarAtualizacao(id: string, data: Record<string, any>) {
-    if (gravar && Object.keys(data).length > 0) paraAtualizar.push({ id, data });
+    if (!gravar || Object.keys(data).length === 0) return;
+    const chaves = Object.keys(data);
+    if (chaves.length === 1 && chaves[0] === "statusPlanilha") {
+      paraAtualizarSomenteStatusPlanilha.push({ id, statusPlanilha: data.statusPlanilha });
+    } else {
+      paraAtualizar.push({ id, data });
+    }
   }
   function planejarHistorico(pedidoId: string, status: string, usuario: string) {
     if (gravar) historicos.push({ pedidoId, status, usuario, data: proximoInstante() });
@@ -590,6 +610,28 @@ export async function processarImportacao(
     if (paraCriar.length > 0) {
       await prisma.pedido.createMany({ data: paraCriar });
     }
+    // Atualizações "só o texto informativo" — o caso mais comum de longe
+    // numa reimportação do dia a dia — todas de uma vez, num UPDATE só via
+    // SQL bruto (UPDATE ... FROM (VALUES ...)), que aceita um valor
+    // diferente por linha numa única ida ao banco. É isso que evita voltar
+    // a esbarrar no limite de tempo quando a maioria das 7 mil e tantas
+    // linhas já existe e só precisa desse toque.
+    if (paraAtualizarSomenteStatusPlanilha.length > 0) {
+      const valores = Prisma.join(
+        paraAtualizarSomenteStatusPlanilha.map(
+          (op) => Prisma.sql`(${op.id}::text, ${op.statusPlanilha}::text)`
+        ),
+        ", "
+      );
+      await prisma.$executeRaw`
+        UPDATE "Pedido" AS p
+        SET "statusPlanilha" = v.status_planilha
+        FROM (VALUES ${valores}) AS v(id, status_planilha)
+        WHERE p.id = v.id
+      `;
+    }
+    // Atualizações "de verdade" (campos diferentes por linha) — bem mais
+    // raras, continuam uma de cada vez.
     for (const op of paraAtualizar) {
       await prisma.pedido.update({ where: { id: op.id }, data: op.data });
     }
