@@ -37,6 +37,94 @@ type Resumo = {
   ignoradosTotal: number;
 };
 
+// Planilhas grandes (a operação real já passa de 7 mil linhas) não cabem
+// numa única requisição — não pelo tamanho do payload, mas pelo tempo: cada
+// linha faz de 1 a 3 idas ao banco, uma de cada vez, e uma função serverless
+// da Vercel tem um limite de alguns segundos. Por isso o envio é dividido em
+// lotes menores, um de cada vez, mostrando o progresso.
+const TAMANHO_LOTE = 500;
+
+const RESUMO_VAZIO: Resumo = {
+  novos: 0,
+  novosAguardandoCanhoto: 0,
+  novosCancelados: 0,
+  novosReentrega: 0,
+  reatribuidos: 0,
+  reentregaPlanilha: 0,
+  canceladosPlanilha: 0,
+  aguardandoCanhoto: 0,
+  protegidos: [],
+  protegidosTotal: 0,
+  semMudancaOperacional: 0,
+  ignorados: [],
+  ignoradosTotal: 0,
+};
+
+function somarResumo(total: Resumo, lote: Resumo): Resumo {
+  return {
+    novos: total.novos + lote.novos,
+    novosAguardandoCanhoto: total.novosAguardandoCanhoto + lote.novosAguardandoCanhoto,
+    novosCancelados: total.novosCancelados + lote.novosCancelados,
+    novosReentrega: total.novosReentrega + lote.novosReentrega,
+    reatribuidos: total.reatribuidos + lote.reatribuidos,
+    reentregaPlanilha: total.reentregaPlanilha + lote.reentregaPlanilha,
+    canceladosPlanilha: total.canceladosPlanilha + lote.canceladosPlanilha,
+    aguardandoCanhoto: total.aguardandoCanhoto + lote.aguardandoCanhoto,
+    protegidos: [...total.protegidos, ...lote.protegidos],
+    protegidosTotal: total.protegidosTotal + lote.protegidosTotal,
+    semMudancaOperacional: total.semMudancaOperacional + lote.semMudancaOperacional,
+    ignorados: [...total.ignorados, ...lote.ignorados],
+    ignoradosTotal: total.ignoradosTotal + lote.ignoradosTotal,
+  };
+}
+
+// Agrupa as linhas pelo mesmo nº de pedido (preservando a ordem de primeira
+// aparição) e divide em lotes de ~TAMANHO_LOTE linhas, sem nunca separar
+// duplicatas do mesmo pedido entre dois lotes — o servidor usa a ordem
+// relativa dessas linhas (mesmo nº, datas diferentes) dentro de UMA
+// requisição pra decidir a ordem cronológica; separadas em lotes diferentes,
+// essa lógica quebraria.
+function dividirEmLotes(linhas: LinhaImportada[], tamanhoAlvo: number): LinhaImportada[][] {
+  const grupos = new Map<string, LinhaImportada[]>();
+  const ordemIds: string[] = [];
+  const semId: LinhaImportada[] = [];
+  for (const linha of linhas) {
+    const id = String(linha.id ?? "").trim();
+    if (!id) {
+      semId.push(linha);
+      continue;
+    }
+    if (!grupos.has(id)) {
+      grupos.set(id, []);
+      ordemIds.push(id);
+    }
+    grupos.get(id)!.push(linha);
+  }
+
+  const lotes: LinhaImportada[][] = [];
+  let atual: LinhaImportada[] = [];
+  function fecharLoteAtual() {
+    if (atual.length > 0) {
+      lotes.push(atual);
+      atual = [];
+    }
+  }
+  for (const id of ordemIds) {
+    const grupo = grupos.get(id)!;
+    if (atual.length > 0 && atual.length + grupo.length > tamanhoAlvo) fecharLoteAtual();
+    atual.push(...grupo);
+  }
+  fecharLoteAtual();
+
+  // Linhas sem nº de pedido sempre viram "ignorado" (sem efeito nenhum no
+  // banco), então a posição delas não importa — entram no último lote.
+  if (semId.length > 0) {
+    if (lotes.length === 0) lotes.push([]);
+    lotes[lotes.length - 1].push(...semId);
+  }
+  return lotes;
+}
+
 // Faixa Unicode das marcas de acento combinantes (0x0300–0x036F), usada
 // depois de normalizar a string em NFD para remover acentos (café -> cafe).
 const REGEX_ACENTOS = new RegExp(String.fromCharCode(0x5b) + "\\u0300-\\u036f" + String.fromCharCode(0x5d), "g");
@@ -153,6 +241,7 @@ export default function ImportarPlanilha() {
   const [concluido, setConcluido] = useState<Resumo | null>(null);
   const [carregando, setCarregando] = useState(false);
   const [erroGeral, setErroGeral] = useState("");
+  const [progresso, setProgresso] = useState<{ fase: "analisando" | "importando"; atual: number; total: number } | null>(null);
   const router = useRouter();
 
   function limpar() {
@@ -161,6 +250,40 @@ export default function ImportarPlanilha() {
     setResumo(null);
     setConcluido(null);
     setErroGeral("");
+    setProgresso(null);
+  }
+
+  // Envia os lotes um de cada vez (nunca em paralelo — cada um só começa
+  // depois que o anterior termina), acumulando o resumo de todos. Se um
+  // lote falhar no meio do caminho, os anteriores já foram aplicados de
+  // verdade (se confirmar=true) — reenviar a mesma planilha depois é seguro,
+  // continua de onde parou, sem duplicar o que já foi importado.
+  async function enviarEmLotes(
+    linhasParaEnviar: LinhaImportada[],
+    confirmar: boolean,
+    fase: "analisando" | "importando"
+  ): Promise<Resumo> {
+    const lotes = dividirEmLotes(linhasParaEnviar, TAMANHO_LOTE);
+    let acumulado = RESUMO_VAZIO;
+    for (let i = 0; i < lotes.length; i++) {
+      setProgresso({ fase, atual: i + 1, total: lotes.length });
+      const res = await fetch("/api/pedidos/importar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ linhas: lotes[i], confirmar }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        const prefixo = lotes.length > 1 ? `Lote ${i + 1} de ${lotes.length}: ` : "";
+        const sufixo =
+          confirmar && i > 0
+            ? " Os lotes anteriores já foram aplicados — pode importar a mesma planilha de novo pra continuar de onde parou."
+            : "";
+        throw new Error(prefixo + (data.erro || "Não foi possível processar.") + sufixo);
+      }
+      acumulado = somarResumo(acumulado, data);
+    }
+    return acumulado;
   }
 
   async function analisar() {
@@ -176,23 +299,15 @@ export default function ImportarPlanilha() {
         return;
       }
       const linhasMapeadas = mapearLinhas(linhasCru);
-      const res = await fetch("/api/pedidos/importar", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ linhas: linhasMapeadas, confirmar: false }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setErroGeral(data.erro || "Não foi possível analisar a planilha.");
-        return;
-      }
+      const acumulado = await enviarEmLotes(linhasMapeadas, false, "analisando");
       setLinhas(linhasMapeadas);
-      setResumo(data);
+      setResumo(acumulado);
     } catch (err) {
       console.error(err);
       setErroGeral(err instanceof Error ? err.message : "Erro de conexão.");
     } finally {
       setCarregando(false);
+      setProgresso(null);
     }
   }
 
@@ -201,26 +316,18 @@ export default function ImportarPlanilha() {
     setCarregando(true);
     setErroGeral("");
     try {
-      const res = await fetch("/api/pedidos/importar", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ linhas, confirmar: true }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setErroGeral(data.erro || "Não foi possível importar a planilha.");
-        return;
-      }
-      setConcluido(data);
+      const acumulado = await enviarEmLotes(linhas, true, "importando");
+      setConcluido(acumulado);
       setResumo(null);
       setLinhas(null);
       setArquivo(null);
       router.refresh();
     } catch (err) {
       console.error(err);
-      setErroGeral("Erro de conexão.");
+      setErroGeral(err instanceof Error ? err.message : "Erro de conexão.");
     } finally {
       setCarregando(false);
+      setProgresso(null);
     }
   }
 
@@ -252,7 +359,11 @@ export default function ImportarPlanilha() {
             />
           </label>
           <button className="btn-importar" onClick={analisar} disabled={!arquivo || carregando}>
-            {carregando ? "Analisando..." : "Analisar planilha"}
+            {progresso && progresso.fase === "analisando"
+              ? `Analisando lote ${progresso.atual} de ${progresso.total}...`
+              : carregando
+                ? "Analisando..."
+                : "Analisar planilha"}
           </button>
         </div>
       )}
@@ -293,7 +404,9 @@ export default function ImportarPlanilha() {
           )}
           <div className="canhoto-upload" style={{ marginTop: 12 }}>
             <button className="btn-importar" onClick={confirmar} disabled={carregando}>
-              {carregando
+              {progresso && progresso.fase === "importando"
+                ? `Importando lote ${progresso.atual} de ${progresso.total}...`
+                : carregando
                 ? "Importando..."
                 : `Confirmar importação (${
                     resumo.novos +
