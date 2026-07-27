@@ -215,6 +215,7 @@ export type ResultadoLinhaImportacao =
 export const MOTIVOS_SUPRIMIDOS_DA_LISTA: ReadonlySet<MotivoTipo> = new Set([
   "protegido_cancelado",
   "protegido_entregue_apos_aceite",
+  "protegido_entregue",
 ]);
 
 // Se um resultado deve aparecer na lista linha-a-linha do resumo de
