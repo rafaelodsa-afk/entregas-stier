@@ -6,6 +6,7 @@ import Link from "next/link";
 import PedidoAcoes, { BadgeStatus } from "@/components/PedidoAcoes";
 import IconeDinheiro from "@/components/IconeDinheiro";
 import AlertaProblemaPedido from "@/components/AlertaProblemaPedido";
+import { formatarDataPura } from "@/lib/formatarData";
 
 type Pedido = {
   id: string;
@@ -21,6 +22,7 @@ type Pedido = {
   mostraIconeDinheiro: boolean;
   alertaProblema: boolean;
   alertaProblemaObservacao: string | null;
+  dataPedido: Date | null;
 };
 
 // Componente só de apresentação — recebe a lista já filtrada (busca +
@@ -79,6 +81,7 @@ export default function TabelaPedidos({
             <th>Status</th>
             <th>Financeiro</th>
             <th>Valor</th>
+            <th>Data</th>
             <th>Ações</th>
           </tr>
         </thead>
@@ -110,6 +113,7 @@ export default function TabelaPedidos({
                 </td>
                 <td>{p.statusFinanceiro === "AGUARDANDO_ACERTO" ? <span className="badge badge-acerto">Aguardando acerto</span> : "—"}</td>
                 <td>{p.valorPedido.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</td>
+                <td>{formatarDataPura(p.dataPedido)}</td>
                 <td>
                   <div className="acoes-linha">
                     <PedidoAcoes pedido={p} isAdmin podeFinalizarLegado={podeFinalizarLegado} />
@@ -123,7 +127,7 @@ export default function TabelaPedidos({
           })}
           {pedidos.length === 0 && (
             <tr>
-              <td colSpan={idsElegiveisLote ? 8 : 7} className="muted" style={{ textAlign: "center", padding: 20 }}>
+              <td colSpan={idsElegiveisLote ? 9 : 8} className="muted" style={{ textAlign: "center", padding: 20 }}>
                 Nenhum pedido encontrado.
               </td>
             </tr>

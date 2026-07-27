@@ -41,7 +41,20 @@ export default function FiltroMultiplo({
       </button>
       {aberto && (
         <div className="filtro-multiplo-painel">
-          {selecionados.size > 0 && (
+          {selecionados.size === opcoes.length ? (
+            <button type="button" className="link-botao filtro-multiplo-limpar" onClick={() => onChange(new Set())}>
+              Desmarcar todos
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="link-botao filtro-multiplo-limpar"
+              onClick={() => onChange(new Set(opcoes.map((o) => o.valor)))}
+            >
+              Marcar todos
+            </button>
+          )}
+          {selecionados.size > 0 && selecionados.size < opcoes.length && (
             <button type="button" className="link-botao filtro-multiplo-limpar" onClick={() => onChange(new Set())}>
               Limpar seleção
             </button>
