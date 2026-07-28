@@ -55,6 +55,12 @@ export default function UsuariosAdmin({ usuariosIniciais }: { usuariosIniciais: 
   const [erroRedefinicao, setErroRedefinicao] = useState("");
   const [salvandoSenha, setSalvandoSenha] = useState(false);
 
+  const [excluindoId, setExcluindoId] = useState<string | null>(null);
+  const [editandoId, setEditandoId] = useState<string | null>(null);
+  const [formEdicao, setFormEdicao] = useState({ nome: "", tipoConta: "TRANSPORTADOR", transportadorNome: "" });
+  const [erroEdicao, setErroEdicao] = useState("");
+  const [salvandoEdicao, setSalvandoEdicao] = useState(false);
+
   async function criarUsuario(e: FormEvent) {
     e.preventDefault();
     setErro("");
@@ -146,6 +152,78 @@ export default function UsuariosAdmin({ usuariosIniciais }: { usuariosIniciais: 
       setErroRedefinicao("Erro de conexão.");
     } finally {
       setSalvandoSenha(false);
+    }
+  }
+
+  async function excluirUsuario(usuario: Usuario) {
+    if (!window.confirm(`Excluir definitivamente o acesso de "${usuario.nome}" (${usuario.username})? Essa ação não pode ser desfeita.`)) {
+      return;
+    }
+    setErro("");
+    setExcluindoId(usuario.id);
+    try {
+      const res = await fetch(`/api/usuarios/${usuario.id}`, { method: "DELETE" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setErro(data.erro || "Não foi possível excluir o usuário.");
+        return;
+      }
+      setUsuarios((atual) => atual.filter((u) => u.id !== usuario.id));
+    } catch (err) {
+      console.error(err);
+      setErro("Erro de conexão.");
+    } finally {
+      setExcluindoId(null);
+    }
+  }
+
+  function abrirEdicao(usuario: Usuario) {
+    setEditandoId(usuario.id);
+    const transportadorNome = usuario.transportadorNome ?? "";
+    setFormEdicao({
+      nome: usuario.nome,
+      tipoConta: usuario.tipoConta ?? "TRANSPORTADOR",
+      transportadorNome: transportadorNome.startsWith(PREFIXO_FROTA_PROPRIA)
+        ? transportadorNome.slice(PREFIXO_FROTA_PROPRIA.length)
+        : transportadorNome,
+    });
+    setErroEdicao("");
+  }
+
+  function cancelarEdicao() {
+    setEditandoId(null);
+    setErroEdicao("");
+  }
+
+  async function salvarEdicao(usuario: Usuario) {
+    setErroEdicao("");
+    setSalvandoEdicao(true);
+    try {
+      const payload: Record<string, any> = { acao: "editar", nome: formEdicao.nome };
+      if (usuario.papel === "TRANSPORTADOR") {
+        payload.tipoConta = formEdicao.tipoConta;
+        payload.transportadorNome =
+          formEdicao.tipoConta === "MOTORISTA"
+            ? PREFIXO_FROTA_PROPRIA + formEdicao.transportadorNome
+            : formEdicao.transportadorNome;
+      }
+      const res = await fetch(`/api/usuarios/${usuario.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setErroEdicao(data.erro || "Não foi possível salvar as alterações.");
+        return;
+      }
+      setUsuarios((atual) => atual.map((u) => (u.id === data.id ? data : u)));
+      cancelarEdicao();
+    } catch (err) {
+      console.error(err);
+      setErroEdicao("Erro de conexão.");
+    } finally {
+      setSalvandoEdicao(false);
     }
   }
 
@@ -295,6 +373,71 @@ export default function UsuariosAdmin({ usuariosIniciais }: { usuariosIniciais: 
                     <button className="btn-ghost" onClick={() => abrirRedefinicao(u.id)}>
                       Redefinir senha
                     </button>
+                    <button className="btn-ghost" onClick={() => abrirEdicao(u)}>
+                      Editar
+                    </button>
+                    <button className="btn-excluir" disabled={excluindoId === u.id} onClick={() => excluirUsuario(u)}>
+                      {excluindoId === u.id ? "..." : "Excluir"}
+                    </button>
+                  </div>
+                )}
+                {editandoId === u.id && (
+                  <div className="form-card" style={{ marginTop: 10, padding: 14 }}>
+                    <div className="form-grid">
+                      <label>
+                        Nome completo
+                        <input
+                          value={formEdicao.nome}
+                          onChange={(e) => setFormEdicao({ ...formEdicao, nome: e.target.value })}
+                          autoFocus
+                        />
+                      </label>
+                      {u.papel === "TRANSPORTADOR" && (
+                        <>
+                          <label>
+                            Tipo de conta
+                            <select
+                              value={formEdicao.tipoConta}
+                              onChange={(e) => setFormEdicao({ ...formEdicao, tipoConta: e.target.value })}
+                            >
+                              <option value="TRANSPORTADOR">Transportador terceirizado</option>
+                              <option value="MOTORISTA">Motorista da frota própria</option>
+                            </select>
+                          </label>
+                          {formEdicao.tipoConta === "MOTORISTA" ? (
+                            <label>
+                              Transportador/frota vinculado
+                              <div className="prefixo-travado">
+                                <span>{PREFIXO_FROTA_PROPRIA}</span>
+                                <input
+                                  value={formEdicao.transportadorNome}
+                                  onChange={(e) => setFormEdicao({ ...formEdicao, transportadorNome: e.target.value })}
+                                  placeholder="Nome do motorista, ex.: Jonathan"
+                                />
+                              </div>
+                            </label>
+                          ) : (
+                            <label>
+                              Nome do transportador
+                              <input
+                                value={formEdicao.transportadorNome}
+                                onChange={(e) => setFormEdicao({ ...formEdicao, transportadorNome: e.target.value })}
+                                placeholder="Ex.: Rudimar"
+                              />
+                            </label>
+                          )}
+                        </>
+                      )}
+                    </div>
+                    {erroEdicao && <p className="erro" style={{ marginTop: 8 }}>{erroEdicao}</p>}
+                    <div className="acoes-linha" style={{ marginTop: 10 }}>
+                      <button disabled={salvandoEdicao} onClick={() => salvarEdicao(u)}>
+                        {salvandoEdicao ? "Salvando..." : "Salvar alterações"}
+                      </button>
+                      <button className="btn-ghost" disabled={salvandoEdicao} onClick={cancelarEdicao}>
+                        Cancelar
+                      </button>
+                    </div>
                   </div>
                 )}
                 {redefinindoId === u.id && (
