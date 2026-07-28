@@ -4,6 +4,7 @@ import { useState, FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import ThemeToggle from "@/components/ThemeToggle";
+import CampoSenha from "@/components/CampoSenha";
 
 function Logo() {
   return (
@@ -60,7 +61,7 @@ function FormularioLogin({ onTrocarSenha }: { onTrocarSenha: () => void }) {
       </label>
       <label>
         Senha
-        <input type="password" value={senha} onChange={(e) => setSenha(e.target.value)} />
+        <CampoSenha value={senha} onChange={(e) => setSenha(e.target.value)} />
       </label>
       <button type="submit" disabled={carregando}>
         {carregando ? "Entrando..." : "Entrar"}
@@ -129,16 +130,16 @@ function FormularioTrocarSenha({ onVoltar }: { onVoltar: () => void }) {
       </label>
       <label>
         Senha atual
-        <input type="password" value={senhaAtual} onChange={(e) => setSenhaAtual(e.target.value)} />
+        <CampoSenha value={senhaAtual} onChange={(e) => setSenhaAtual(e.target.value)} />
       </label>
       <label>
         Nova senha
-        <input type="password" value={novaSenha} onChange={(e) => setNovaSenha(e.target.value)} />
+        <CampoSenha value={novaSenha} onChange={(e) => setNovaSenha(e.target.value)} />
         <span className="dica-campo">Mínimo 4 letras e 4 números</span>
       </label>
       <label>
         Confirmar nova senha
-        <input type="password" value={confirmarSenha} onChange={(e) => setConfirmarSenha(e.target.value)} />
+        <CampoSenha value={confirmarSenha} onChange={(e) => setConfirmarSenha(e.target.value)} />
       </label>
       <button type="submit" disabled={carregando}>
         {carregando ? "Trocando..." : "Trocar senha"}

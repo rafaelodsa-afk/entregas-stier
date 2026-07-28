@@ -457,6 +457,32 @@ button {
   cursor: default;
   flex-shrink: 0;
 }
+.campo-senha {
+  position: relative;
+  display: flex;
+}
+.campo-senha input {
+  flex: 1;
+  padding-right: 38px;
+}
+.campo-senha-olho {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.campo-senha-olho:hover {
+  color: var(--text);
+}
 .btn-relatar-problema {
   background: none !important;
   border: none;

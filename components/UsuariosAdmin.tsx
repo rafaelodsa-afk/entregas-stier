@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, FormEvent } from "react";
+import CampoSenha from "@/components/CampoSenha";
 
 type Usuario = {
   id: string;
@@ -164,8 +165,7 @@ export default function UsuariosAdmin({ usuariosIniciais }: { usuariosIniciais: 
           </label>
           <label>
             Senha provisória
-            <input
-              type="password"
+            <CampoSenha
               value={form.senha}
               onChange={(e) => setForm({ ...form, senha: e.target.value })}
               required
@@ -174,8 +174,7 @@ export default function UsuariosAdmin({ usuariosIniciais }: { usuariosIniciais: 
           </label>
           <label>
             Confirmar senha
-            <input
-              type="password"
+            <CampoSenha
               value={form.confirmarSenha}
               onChange={(e) => setForm({ ...form, confirmarSenha: e.target.value })}
               required
@@ -303,8 +302,7 @@ export default function UsuariosAdmin({ usuariosIniciais }: { usuariosIniciais: 
                     <div className="form-grid">
                       <label>
                         Nova senha provisória
-                        <input
-                          type="password"
+                        <CampoSenha
                           value={novaSenha}
                           onChange={(e) => setNovaSenha(e.target.value)}
                           autoFocus
@@ -313,8 +311,7 @@ export default function UsuariosAdmin({ usuariosIniciais }: { usuariosIniciais: 
                       </label>
                       <label>
                         Confirmar nova senha
-                        <input
-                          type="password"
+                        <CampoSenha
                           value={confirmarNovaSenha}
                           onChange={(e) => setConfirmarNovaSenha(e.target.value)}
                         />

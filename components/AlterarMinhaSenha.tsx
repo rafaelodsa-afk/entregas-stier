@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, FormEvent } from "react";
+import CampoSenha from "@/components/CampoSenha";
 
 export default function AlterarMinhaSenha() {
   const [aberto, setAberto] = useState(false);
@@ -73,16 +74,16 @@ export default function AlterarMinhaSenha() {
           <div className="form-grid">
             <label>
               Senha atual
-              <input type="password" value={senhaAtual} onChange={(e) => setSenhaAtual(e.target.value)} autoFocus required />
+              <CampoSenha value={senhaAtual} onChange={(e) => setSenhaAtual(e.target.value)} autoFocus required />
             </label>
             <label>
               Nova senha
-              <input type="password" value={novaSenha} onChange={(e) => setNovaSenha(e.target.value)} required />
+              <CampoSenha value={novaSenha} onChange={(e) => setNovaSenha(e.target.value)} required />
               <span className="dica-campo">Mínimo 4 letras e 4 números</span>
             </label>
             <label>
               Confirmar nova senha
-              <input type="password" value={confirmarSenha} onChange={(e) => setConfirmarSenha(e.target.value)} required />
+              <CampoSenha value={confirmarSenha} onChange={(e) => setConfirmarSenha(e.target.value)} required />
             </label>
           </div>
           {erro && <p className="erro">{erro}</p>}
