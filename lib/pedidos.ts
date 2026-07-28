@@ -72,7 +72,7 @@ export function ehOperacaoDeVenda(operacao: unknown): boolean {
   return texto === "VENDA" || texto === "VENDAS";
 }
 
-const PAGAMENTOS_A_VISTA = ["DINHEIRO", "PIX", "A VISTA", "AVISTA"];
+const PAGAMENTOS_A_VISTA = ["DINHEIRO", "PIX", "A VISTA", "AVISTA", "PIX - CARTÃO", "DINHEIRO, PIX"];
 
 export function ehPagamentoAVista(formaPagamento: unknown): boolean {
   return PAGAMENTOS_A_VISTA.includes(String(formaPagamento ?? "").trim().toUpperCase());
