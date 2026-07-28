@@ -26,6 +26,10 @@ type Pedido = {
   dataPedido: Date | null;
   alertaProblema: boolean;
   alertaProblemaObservacao: string | null;
+  alertaRejeicaoCanhoto: boolean;
+  alertaRejeicaoCanhotoObservacao: string | null;
+  alertaRejeicaoComprovante: boolean;
+  alertaRejeicaoComprovanteObservacao: string | null;
 };
 
 // Únicos status em que uma ação em lote se aplica — nunca leva um pedido

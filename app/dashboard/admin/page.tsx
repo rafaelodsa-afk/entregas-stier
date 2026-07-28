@@ -33,6 +33,10 @@ export default async function AdminDashboard({ searchParams }: { searchParams: {
       dataPedido: true,
       alertaProblema: true,
       alertaProblemaObservacao: true,
+      alertaRejeicaoCanhoto: true,
+      alertaRejeicaoCanhotoObservacao: true,
+      alertaRejeicaoComprovante: true,
+      alertaRejeicaoComprovanteObservacao: true,
     },
   });
   const transportadores = [...new Set(pedidos.map((p) => p.transportador))].sort();
@@ -61,6 +65,10 @@ export default async function AdminDashboard({ searchParams }: { searchParams: {
           dataPedido: p.dataPedido,
           alertaProblema: p.alertaProblema,
           alertaProblemaObservacao: p.alertaProblemaObservacao,
+          alertaRejeicaoCanhoto: p.alertaRejeicaoCanhoto,
+          alertaRejeicaoCanhotoObservacao: p.alertaRejeicaoCanhotoObservacao,
+          alertaRejeicaoComprovante: p.alertaRejeicaoComprovante,
+          alertaRejeicaoComprovanteObservacao: p.alertaRejeicaoComprovanteObservacao,
         }))}
       >
         <ImportarPlanilha />

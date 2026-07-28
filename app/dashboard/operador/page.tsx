@@ -43,6 +43,10 @@ export default async function OperadorDashboard() {
       dataPedido: true,
       alertaProblema: true,
       alertaProblemaObservacao: true,
+      alertaRejeicaoCanhoto: true,
+      alertaRejeicaoCanhotoObservacao: true,
+      alertaRejeicaoComprovante: true,
+      alertaRejeicaoComprovanteObservacao: true,
     },
   });
   const pendentes = pedidos.filter((p) => !["ENTREGUE", "CANCELADO", "DEVOLVIDO"].includes(p.statusEntrega));
@@ -72,6 +76,10 @@ export default async function OperadorDashboard() {
           dataPedido: p.dataPedido,
           alertaProblema: p.alertaProblema,
           alertaProblemaObservacao: p.alertaProblemaObservacao,
+          alertaRejeicaoCanhoto: p.alertaRejeicaoCanhoto,
+          alertaRejeicaoCanhotoObservacao: p.alertaRejeicaoCanhotoObservacao,
+          alertaRejeicaoComprovante: p.alertaRejeicaoComprovante,
+          alertaRejeicaoComprovanteObservacao: p.alertaRejeicaoComprovanteObservacao,
         }))}
       />
     </div>

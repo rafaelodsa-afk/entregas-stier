@@ -85,6 +85,14 @@ model Pedido {
   // depois de resolvido, pra ficar no histórico permanente do pedido.
   alertaProblema           Boolean @default(false)
   alertaProblemaObservacao String?
+  // Direção oposta do alerta acima: admin/analista/master rejeitando um
+  // canhoto ou comprovante que o transportador enviou errado. Cada um se
+  // resolve sozinho (sem botão "resolver") assim que o transportador reenvia
+  // o arquivo correspondente — ver finalizarEntrega/anexarComprovantePagamento.
+  alertaRejeicaoCanhoto            Boolean @default(false)
+  alertaRejeicaoCanhotoObservacao  String?
+  alertaRejeicaoComprovante           Boolean @default(false)
+  alertaRejeicaoComprovanteObservacao String?
   canhotoUrl         String?
   canhotoTipo        String?
   comprovantePagamentoUrl  String?

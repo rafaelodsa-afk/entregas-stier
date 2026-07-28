@@ -29,6 +29,10 @@ type Pedido = {
   finalizadoSemCanhoto?: boolean;
   alertaProblema?: boolean;
   alertaProblemaObservacao?: string | null;
+  alertaRejeicaoCanhoto?: boolean;
+  alertaRejeicaoCanhotoObservacao?: string | null;
+  alertaRejeicaoComprovante?: boolean;
+  alertaRejeicaoComprovanteObservacao?: string | null;
 };
 
 // Só não dá pra anexar canhoto quando o pedido já chegou num desses estados finais.
@@ -172,6 +176,36 @@ export default function PedidoAcoes({
     await acaoSimples({ acao: "finalizarSemComprovante", justificativa: justificativa.trim() });
   }
 
+  async function rejeitarCanhoto() {
+    const observacao = window.prompt(
+      "Motivo da rejeição do canhoto (obrigatório) — o pedido volta pra Em rota e o transportador verá o motivo:"
+    );
+    if (observacao === null) return;
+    if (!observacao.trim()) {
+      setErro("Descreva o motivo pra rejeitar o canhoto.");
+      return;
+    }
+    if (!window.confirm(`Rejeitar o canhoto do pedido #${pedido.id}? Ele volta pro status "Em rota de entrega".`)) {
+      return;
+    }
+    await acaoSimples({ acao: "rejeitarCanhoto", observacao: observacao.trim() });
+  }
+
+  async function rejeitarComprovante() {
+    const observacao = window.prompt(
+      "Motivo da rejeição do comprovante de pagamento (obrigatório) — o transportador verá o motivo e deverá reenviar:"
+    );
+    if (observacao === null) return;
+    if (!observacao.trim()) {
+      setErro("Descreva o motivo pra rejeitar o comprovante.");
+      return;
+    }
+    if (!window.confirm(`Rejeitar o comprovante de pagamento do pedido #${pedido.id}?`)) {
+      return;
+    }
+    await acaoSimples({ acao: "rejeitarComprovante", observacao: observacao.trim() });
+  }
+
   // Além dos status finais, também não dá pra anexar canhoto antes do
   // transportador aceitar o pedido — a API bloqueia isso de verdade também.
   const podeAnexarCanhoto =
@@ -268,7 +302,17 @@ export default function PedidoAcoes({
           </button>
         )}
         {linkCanhoto}
+        {pedido.canhotoUrl && (
+          <button className="btn-ghost" disabled={carregando} onClick={rejeitarCanhoto}>
+            Rejeitar canhoto
+          </button>
+        )}
         {linkComprovante}
+        {pedido.comprovantePagamentoUrl && (
+          <button className="btn-ghost" disabled={carregando} onClick={rejeitarComprovante}>
+            Rejeitar comprovante
+          </button>
+        )}
         {blocoCanhoto}
         {blocoComprovante}
         {podeFinalizarLegado && podeAnexarCanhoto && (
@@ -283,6 +327,16 @@ export default function PedidoAcoes({
 
   return (
     <div className="pedido-actions">
+      {pedido.alertaRejeicaoCanhoto && (
+        <div className="alerta-rejeicao">
+          <IconeAlertaTriangulo /> Canhoto rejeitado pela Stier: {pedido.alertaRejeicaoCanhotoObservacao}. Reenvie o canhoto.
+        </div>
+      )}
+      {pedido.alertaRejeicaoComprovante && (
+        <div className="alerta-rejeicao">
+          <IconeAlertaTriangulo /> Comprovante de pagamento rejeitado pela Stier: {pedido.alertaRejeicaoComprovanteObservacao}. Reenvie o comprovante.
+        </div>
+      )}
       {pedido.statusEntrega === "AGUARDANDO_ACEITE" && (
         <button disabled={carregando} onClick={() => acaoSimples({ acao: "avancarStatus", statusEntrega: "AGUARDANDO_CARREGAMENTO" })}>
           Aceitar pedido

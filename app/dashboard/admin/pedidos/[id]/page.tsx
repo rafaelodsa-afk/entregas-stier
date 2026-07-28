@@ -89,6 +89,18 @@ export default async function DetalhePedidoPage({ params }: { params: { id: stri
               <div>{pedido.alertaProblemaObservacao}</div>
             </div>
           )}
+          {pedido.alertaRejeicaoCanhotoObservacao && (
+            <div>
+              <span className="muted">Canhoto rejeitado {pedido.alertaRejeicaoCanhoto ? "(aguardando reenvio)" : "(já reenviado)"}</span>
+              <div>{pedido.alertaRejeicaoCanhotoObservacao}</div>
+            </div>
+          )}
+          {pedido.alertaRejeicaoComprovanteObservacao && (
+            <div>
+              <span className="muted">Comprovante rejeitado {pedido.alertaRejeicaoComprovante ? "(aguardando reenvio)" : "(já reenviado)"}</span>
+              <div>{pedido.alertaRejeicaoComprovanteObservacao}</div>
+            </div>
+          )}
           {pedido.finalizadoSemCanhoto && (
             <div><span className="muted">Justificativa (sem comprovante)</span><div>{pedido.justificativaSemCanhoto}</div></div>
           )}

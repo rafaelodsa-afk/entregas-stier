@@ -99,6 +99,11 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       data.statusFinanceiro = geraPendenciaFinanceira(pedido.operacao, pedido.formaPagamento) ? "AGUARDANDO_ACERTO" : "NA";
       data.canhotoUrl = body.canhotoUrl;
       data.canhotoTipo = body.canhotoTipo || "foto";
+      // Reenviar o canhoto resolve sozinho um alerta de rejeição anterior
+      // (a observação em si continua registrada, só o "ativo" muda).
+      if (pedido.alertaRejeicaoCanhoto) {
+        data.alertaRejeicaoCanhoto = false;
+      }
       statusParaHistorico = "ENTREGUE";
       break;
     }
@@ -145,6 +150,9 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       }
       data.comprovantePagamentoUrl = body.comprovanteUrl;
       data.comprovantePagamentoTipo = body.comprovanteTipo || "foto";
+      if (pedido.alertaRejeicaoComprovante) {
+        data.alertaRejeicaoComprovante = false;
+      }
       statusParaHistorico = "Comprovante de pagamento anexado";
       break;
     }
@@ -169,6 +177,52 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       // pendente. Continua visível pra sempre no detalhe do pedido.
       data.alertaProblema = false;
       statusParaHistorico = "Alerta de problema marcado como resolvido";
+      break;
+    }
+    case "rejeitarCanhoto": {
+      if (!podeVerTudo(papel)) {
+        return NextResponse.json({ erro: "Sem permissão para rejeitar canhoto" }, { status: 403 });
+      }
+      if (!pedido.canhotoUrl) {
+        return NextResponse.json({ erro: "Este pedido não tem canhoto anexado" }, { status: 400 });
+      }
+      const motivo = String(body.observacao ?? "").trim();
+      if (!motivo) {
+        return NextResponse.json({ erro: "Descreva o motivo da rejeição" }, { status: 400 });
+      }
+      await apagarArquivosR2([pedido.canhotoUrl]);
+      data.canhotoUrl = null;
+      data.canhotoTipo = null;
+      data.dataEntrega = null;
+      data.statusEntrega = "EM_ROTA";
+      // Só reverte o financeiro se a pendência veio dessa própria entrega
+      // (ainda não confirmada) — se já foi paga, isso não deveria acontecer
+      // na prática, mas por segurança não mexe em PAGO.
+      if (pedido.statusFinanceiro === "AGUARDANDO_ACERTO") {
+        data.statusFinanceiro = "NA";
+      }
+      data.alertaRejeicaoCanhoto = true;
+      data.alertaRejeicaoCanhotoObservacao = motivo;
+      statusParaHistorico = `Canhoto rejeitado — voltou pra Em rota: ${motivo}`;
+      break;
+    }
+    case "rejeitarComprovante": {
+      if (!podeVerTudo(papel)) {
+        return NextResponse.json({ erro: "Sem permissão para rejeitar comprovante" }, { status: 403 });
+      }
+      if (!pedido.comprovantePagamentoUrl) {
+        return NextResponse.json({ erro: "Este pedido não tem comprovante de pagamento anexado" }, { status: 400 });
+      }
+      const motivo = String(body.observacao ?? "").trim();
+      if (!motivo) {
+        return NextResponse.json({ erro: "Descreva o motivo da rejeição" }, { status: 400 });
+      }
+      await apagarArquivosR2([pedido.comprovantePagamentoUrl]);
+      data.comprovantePagamentoUrl = null;
+      data.comprovantePagamentoTipo = null;
+      data.alertaRejeicaoComprovante = true;
+      data.alertaRejeicaoComprovanteObservacao = motivo;
+      statusParaHistorico = `Comprovante de pagamento rejeitado: ${motivo}`;
       break;
     }
     case "confirmarAcerto": {

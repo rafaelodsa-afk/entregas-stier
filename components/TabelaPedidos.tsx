@@ -22,6 +22,10 @@ type Pedido = {
   mostraIconeDinheiro: boolean;
   alertaProblema: boolean;
   alertaProblemaObservacao: string | null;
+  alertaRejeicaoCanhoto: boolean;
+  alertaRejeicaoCanhotoObservacao: string | null;
+  alertaRejeicaoComprovante: boolean;
+  alertaRejeicaoComprovanteObservacao: string | null;
   dataPedido: Date | null;
 };
 
