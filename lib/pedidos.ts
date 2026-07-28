@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { Prisma } from "@prisma/client";
 import { LABEL_STATUS } from "@/lib/statusLabels";
+import { normalizarNomeTransportador } from "@/lib/transportador";
 
 export type LinhaPedido = {
   id?: unknown;
@@ -90,7 +91,7 @@ export function geraPendenciaFinanceira(operacao: unknown, formaPagamento: unkno
 export async function criarOuReatribuirPedido(linha: LinhaPedido, nomeUsuario: string) {
   const id = String(linha.id ?? "").trim();
   const cliente = String(linha.cliente ?? "").trim();
-  const transportador = String(linha.transportador ?? "").trim();
+  const transportador = normalizarNomeTransportador(String(linha.transportador ?? ""));
   if (!id || !cliente || !transportador) {
     return { ok: false as const, erro: "Preencha nº do pedido, cliente e transportador" };
   }
@@ -403,7 +404,7 @@ export async function processarImportacao(
   for (const linha of linhas) {
     const id = String(linha.id ?? "").trim();
     const cliente = String(linha.cliente ?? "").trim();
-    const transportador = String(linha.transportador ?? "").trim();
+    const transportador = normalizarNomeTransportador(String(linha.transportador ?? ""));
 
     if (!id || !cliente || !transportador) {
       resultados.push({

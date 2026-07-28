@@ -21,7 +21,7 @@ export default async function GraficosPage({
 
   const filtroTransportador = searchParams.transportador ?? "";
   const pedidos = filtroTransportador
-    ? todosPedidos.filter((p) => p.transportador === filtroTransportador)
+    ? todosPedidos.filter((p) => p.transportador.toLowerCase() === filtroTransportador.toLowerCase())
     : todosPedidos;
 
   // Geocodifica pra TODOS os pendentes do transportador selecionado (sem

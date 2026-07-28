@@ -62,7 +62,7 @@ export default function PainelFinanceiro({
   const [dataFinal, setDataFinal] = useState("");
 
   const opcoesTransportador = useMemo(
-    () => transportadores.map((t) => ({ valor: t, rotulo: t })),
+    () => transportadores.map((t) => ({ valor: t, rotulo: t.toUpperCase() })),
     [transportadores]
   );
 

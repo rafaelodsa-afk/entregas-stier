@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { podeGerenciarUsuariosPorPapel, hashPassword, senhaValida, MENSAGEM_REGRA_SENHA } from "@/lib/auth";
+import { normalizarNomeTransportador } from "@/lib/transportador";
 
 const TIPOS_CONTA = ["TRANSPORTADOR", "MOTORISTA"];
 
@@ -69,7 +70,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
         return NextResponse.json({ erro: "Informe o nome do transportador" }, { status: 400 });
       }
       data.tipoConta = tipoConta;
-      data.transportadorNome = transportadorNome;
+      data.transportadorNome = normalizarNomeTransportador(transportadorNome);
     }
     const atualizado = await prisma.usuario.update({ where: { id: params.id }, data, select: SELECT_SEGURO });
     return NextResponse.json(atualizado);

@@ -56,7 +56,7 @@ export default function GraficosClient({
   const porTransportador = transportadores
     .map((t, i) => ({
       label: t,
-      valor: todosFiltrados.filter((p) => p.transportador === t).length,
+      valor: todosFiltrados.filter((p) => p.transportador.toLowerCase() === t.toLowerCase()).length,
       cor: CORES_TRANSPORTADOR[i % CORES_TRANSPORTADOR.length],
     }))
     .sort((a, b) => b.valor - a.valor);

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { hashPassword, podeGerenciarUsuariosPorPapel, senhaValida, MENSAGEM_REGRA_SENHA } from "@/lib/auth";
+import { normalizarNomeTransportador } from "@/lib/transportador";
 
 const PAPEIS_CRIAVEIS = ["ADMIN", "ANALISTA", "TRANSPORTADOR"];
 const TIPOS_CONTA = ["TRANSPORTADOR", "MOTORISTA"];
@@ -95,6 +96,7 @@ export async function POST(req: NextRequest) {
     if (!transportadorNome || nomeMotoristaVazio) {
       return NextResponse.json({ erro: "Informe o nome do transportador" }, { status: 400 });
     }
+    transportadorNome = normalizarNomeTransportador(transportadorNome);
   }
 
   // Só quem já pode gerenciar usuários pode delegar essa permissão a um admin novo.
