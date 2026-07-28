@@ -27,7 +27,22 @@ type Pedido = {
   alertaProblemaObservacao: string | null;
 };
 
-const OPCOES_STATUS = Object.entries(LABEL_STATUS).map(([valor, rotulo]) => ({ valor, rotulo }));
+// "Entregue (sem comprovante)" não é um statusEntrega próprio no banco — é
+// o mesmo ENTREGUE com finalizadoSemCanhoto=true (ver BadgeStatus). Pra
+// poder filtrar separado do "Entregue" normal, usa essa chave sintética só
+// no filtro, nunca gravada em lugar nenhum.
+const CHAVE_ENTREGUE_SEM_COMPROVANTE = "ENTREGUE_SEM_COMPROVANTE";
+
+function chaveStatusFiltro(p: { statusEntrega: string; finalizadoSemCanhoto: boolean }) {
+  return p.statusEntrega === "ENTREGUE" && p.finalizadoSemCanhoto ? CHAVE_ENTREGUE_SEM_COMPROVANTE : p.statusEntrega;
+}
+
+const OPCOES_STATUS = (() => {
+  const opcoes = Object.entries(LABEL_STATUS).map(([valor, rotulo]) => ({ valor, rotulo }));
+  const indiceEntregue = opcoes.findIndex((o) => o.valor === "ENTREGUE");
+  opcoes.splice(indiceEntregue + 1, 0, { valor: CHAVE_ENTREGUE_SEM_COMPROVANTE, rotulo: "Entregue (sem comprovante)" });
+  return opcoes;
+})();
 
 export default function PainelPedidos({
   pedidos,
@@ -65,7 +80,7 @@ export default function PainelPedidos({
   const buscaNormalizada = busca.trim().toLowerCase();
   const filtrados = pedidos.filter((p) => {
     if (apenasAlertaProblema && !p.alertaProblema) return false;
-    if (statusFiltro.size > 0 && !statusFiltro.has(p.statusEntrega)) return false;
+    if (statusFiltro.size > 0 && !statusFiltro.has(chaveStatusFiltro(p))) return false;
     if (transportadorFiltro.size > 0 && !transportadorFiltro.has(p.transportador)) return false;
     if (!dataNoIntervalo(p.dataPedido, dataInicial, dataFinal)) return false;
     if (buscaNormalizada) {
