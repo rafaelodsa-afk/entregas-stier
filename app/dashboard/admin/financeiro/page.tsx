@@ -33,7 +33,7 @@ export default async function FinanceiroPage() {
       where: { statusFinanceiro: "PAGO" },
       orderBy: { acertoConfirmadoEm: "desc" },
       take: 200,
-      select: { id: true, cliente: true, transportador: true, valorPedido: true, dataPedido: true, acertoConfirmadoEm: true, comprovantePagamentoUrl: true },
+      select: { id: true, cliente: true, transportador: true, valorPedido: true, dataPedido: true, acertoConfirmadoEm: true, acertoConfirmadoPor: true, comprovantePagamentoUrl: true },
     }),
   ]);
 
@@ -78,6 +78,7 @@ export default async function FinanceiroPage() {
           valorPedido: Number(p.valorPedido),
           dataPedido: p.dataPedido,
           acertoConfirmadoEm: p.acertoConfirmadoEm,
+          acertoConfirmadoPor: p.acertoConfirmadoPor,
           comprovantePagamentoUrl: p.comprovantePagamentoUrl,
         }))}
       />

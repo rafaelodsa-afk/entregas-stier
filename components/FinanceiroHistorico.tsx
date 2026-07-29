@@ -7,6 +7,7 @@ type PedidoPago = {
   valorPedido: number;
   dataPedido: Date | null;
   acertoConfirmadoEm: Date | null;
+  acertoConfirmadoPor: string | null;
   comprovantePagamentoUrl: string | null;
 };
 
@@ -25,6 +26,7 @@ export default function FinanceiroHistorico({ pedidos }: { pedidos: PedidoPago[]
           <th>Data do pedido</th>
           <th>Valor</th>
           <th>Recebido em</th>
+          <th>Confirmado por</th>
           <th>Comprovante</th>
         </tr>
       </thead>
@@ -37,6 +39,7 @@ export default function FinanceiroHistorico({ pedidos }: { pedidos: PedidoPago[]
             <td>{formatarDataPura(p.dataPedido)}</td>
             <td>{Number(p.valorPedido).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</td>
             <td>{p.acertoConfirmadoEm ? new Date(p.acertoConfirmadoEm).toLocaleDateString("pt-BR") : "—"}</td>
+            <td>{p.acertoConfirmadoPor || "—"}</td>
             <td>
               {p.comprovantePagamentoUrl ? (
                 <a className="link-canhoto" href={p.comprovantePagamentoUrl} target="_blank" rel="noreferrer">

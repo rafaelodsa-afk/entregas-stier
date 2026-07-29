@@ -100,6 +100,7 @@ model Pedido {
   dataCriacao        DateTime          @default(now())
   dataEntrega        DateTime?
   acertoConfirmadoEm DateTime?
+  acertoConfirmadoPor String? // nome de quem clicou em "Marcar como recebido"
   // Quando o pedido entrou em Reentrega — limpo (volta a null) assim que
   // é reatribuído ou tem o status alterado manualmente. Usado só pra
   // saber há quanto tempo está parado, não é histórico completo.

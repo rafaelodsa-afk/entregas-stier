@@ -36,6 +36,7 @@ type PedidoPago = {
   valorPedido: number;
   dataPedido: Date | null;
   acertoConfirmadoEm: Date | null;
+  acertoConfirmadoPor: string | null;
   comprovantePagamentoUrl: string | null;
 };
 
@@ -56,6 +57,7 @@ export default function PainelFinanceiro({
   historico: PedidoPago[];
   transportadores: string[];
 }) {
+  const [busca, setBusca] = useState("");
   const [transportadorFiltro, setTransportadorFiltro] = useState<Set<string>>(new Set());
   const [statusFiltro, setStatusFiltro] = useState<Set<string>>(new Set());
   const [dataInicial, setDataInicial] = useState("");
@@ -66,9 +68,15 @@ export default function PainelFinanceiro({
     [transportadores]
   );
 
-  function passa(transportador: string, dataPedido: Date | null) {
+  const buscaNormalizada = busca.trim().toLowerCase();
+
+  function passa(id: string, cliente: string, transportador: string, dataPedido: Date | null) {
     if (transportadorFiltro.size > 0 && !transportadorFiltro.has(transportador)) return false;
     if (!dataNoIntervalo(dataPedido, dataInicial, dataFinal)) return false;
+    if (buscaNormalizada) {
+      const alvo = `${id} ${cliente}`.toLowerCase();
+      if (!alvo.includes(buscaNormalizada)) return false;
+    }
     return true;
   }
 
@@ -76,9 +84,9 @@ export default function PainelFinanceiro({
   const mostraAcerto = statusFiltro.size === 0 || statusFiltro.has("AGUARDANDO_ACERTO");
   const mostraPago = statusFiltro.size === 0 || statusFiltro.has("PAGO");
 
-  const previstosFiltrados = previstos.filter((p) => passa(p.transportador, p.dataPedido));
-  const aguardandoAcertoFiltrados = aguardandoAcerto.filter((p) => passa(p.transportador, p.dataPedido));
-  const historicoFiltrados = historico.filter((p) => passa(p.transportador, p.dataPedido));
+  const previstosFiltrados = previstos.filter((p) => passa(p.id, p.cliente, p.transportador, p.dataPedido));
+  const aguardandoAcertoFiltrados = aguardandoAcerto.filter((p) => passa(p.id, p.cliente, p.transportador, p.dataPedido));
+  const historicoFiltrados = historico.filter((p) => passa(p.id, p.cliente, p.transportador, p.dataPedido));
 
   // Força o FinanceiroTabela a remontar (e re-sincronizar seu estado
   // interno de lista) sempre que o conjunto filtrado mudar — ele guarda a
@@ -89,6 +97,13 @@ export default function PainelFinanceiro({
   return (
     <div>
       <div className="filtros-pedidos">
+        <input
+          type="text"
+          placeholder="Buscar por nº do pedido ou cliente..."
+          value={busca}
+          onChange={(e) => setBusca(e.target.value)}
+          className="busca-pedidos"
+        />
         <FiltroMultiplo rotulo="Status financeiro" opcoes={OPCOES_STATUS_FINANCEIRO} selecionados={statusFiltro} onChange={setStatusFiltro} />
         <FiltroMultiplo rotulo="Transportadores" opcoes={opcoesTransportador} selecionados={transportadorFiltro} onChange={setTransportadorFiltro} />
         <FiltroPeriodo dataInicial={dataInicial} dataFinal={dataFinal} onChangeInicial={setDataInicial} onChangeFinal={setDataFinal} />

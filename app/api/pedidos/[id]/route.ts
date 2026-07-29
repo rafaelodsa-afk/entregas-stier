@@ -231,6 +231,8 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       }
       data.statusFinanceiro = "PAGO";
       data.acertoConfirmadoEm = new Date();
+      data.acertoConfirmadoPor = nomeUsuario;
+      statusParaHistorico = `Acerto financeiro confirmado por ${nomeUsuario}`;
       break;
     }
     case "aceitarPeloTransportador": {
