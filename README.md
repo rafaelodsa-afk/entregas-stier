@@ -22,7 +22,7 @@ e motoristas da frota própria. Publicado em produção e em uso.
   mexer no banco direto)
 - Upload de canhoto (foto ou PDF) direto na tabela de pedidos ou na tela do
   transportador — abre a câmera no celular, guarda o arquivo de verdade no
-  Vercel Blob, marca o pedido como Entregue automaticamente e, se o
+  Cloudflare R2, marca o pedido como Entregue automaticamente e, se o
   pagamento for dinheiro/PIX, já deixa como "Aguardando acerto"
 - Importar pedidos por planilha (.xlsx/.csv), lida inteiramente no navegador
   (não trava com planilhas grandes) e com prévia antes de confirmar:
@@ -175,7 +175,7 @@ app/
     auth/          → login e logout
     pedidos/       → listar, criar, atualizar, excluir e importar por planilha
     usuarios/      → criar e desativar/reativar acessos
-    upload/        → autoriza o upload de canhoto (Vercel Blob)
+    r2/presign-upload/ → autoriza o upload de canhoto (Cloudflare R2)
 components/
   TabelaPedidos.tsx      → tabela de pedidos com busca, filtro de status e exclusão
   PedidoAcoes.tsx        → botões de ação por pedido (aceitar, anexar canhoto, etc.)
