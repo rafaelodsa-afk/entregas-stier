@@ -29,14 +29,28 @@ const ALIASES_TRANSPORTADOR: Record<string, string> = {
   jonathan: "Frota Própria – Jonathan",
   "frota própria – jonathan": "Frota Própria – Jonathan",
   "frota propria - jonathan": "Frota Própria – Jonathan",
+  "murilo (frota própria - 170)": "Frota Própria – Murilo",
+  "murilo (frota propria - 170)": "Frota Própria – Murilo",
+  "murilo (frota própria - 190)": "Frota Própria – Murilo",
+  "murilo (frota propria - 190)": "Frota Própria – Murilo",
+  "murilo (frota própria - master)": "Frota Própria – Murilo",
+  "murilo (frota propria - master)": "Frota Própria – Murilo",
+  murilo: "Frota Própria – Murilo",
+  "frota própria – murilo": "Frota Própria – Murilo",
+  "frota propria - murilo": "Frota Própria – Murilo",
 };
 
 // Aplica os apelidos conhecidos acima; se o nome não bater com nenhum deles
-// (transportador novo, sem alias cadastrado), só limpa espaço nas pontas e
-// mantém a grafia como veio — não força maiúscula/minúscula em nomes que a
-// gente ainda não conhece.
+// (transportador novo, sem alias cadastrado), só limpa os espaços e mantém a
+// grafia como veio — não força maiúscula/minúscula em nomes que a gente ainda
+// não conhece.
+//
+// Além de tirar espaço das pontas, colapsa espaço repetido no meio: um nome
+// digitado como "Frota Própria –  Murilo" (dois espaços) é o MESMO
+// transportador de "Frota Própria – Murilo", e essa diferença invisível já
+// deixou um motorista sem enxergar nenhum pedido dele.
 export function normalizarNomeTransportador(bruto: string): string {
-  const aparado = bruto.trim();
+  const aparado = bruto.trim().replace(/\s+/g, " ");
   const chave = aparado.toLowerCase();
   return ALIASES_TRANSPORTADOR[chave] ?? aparado;
 }

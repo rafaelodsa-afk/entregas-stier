@@ -204,7 +204,7 @@ export default function UsuariosAdmin({ usuariosIniciais }: { usuariosIniciais: 
         payload.tipoConta = formEdicao.tipoConta;
         payload.transportadorNome =
           formEdicao.tipoConta === "MOTORISTA"
-            ? PREFIXO_FROTA_PROPRIA + formEdicao.transportadorNome
+            ? PREFIXO_FROTA_PROPRIA + formEdicao.transportadorNome.replace(/^\s+/, "")
             : formEdicao.transportadorNome;
       }
       const res = await fetch(`/api/usuarios/${usuario.id}`, {
@@ -296,7 +296,10 @@ export default function UsuariosAdmin({ usuariosIniciais }: { usuariosIniciais: 
                     <span>{PREFIXO_FROTA_PROPRIA}</span>
                     <input
                       value={form.transportadorNome.startsWith(PREFIXO_FROTA_PROPRIA) ? form.transportadorNome.slice(PREFIXO_FROTA_PROPRIA.length) : form.transportadorNome}
-                      onChange={(e) => setForm({ ...form, transportadorNome: PREFIXO_FROTA_PROPRIA + e.target.value })}
+                      // tira espaço no começo do que foi digitado: o prefixo já
+                      // termina com um espaço, e juntar os dois gera um nome com
+                      // espaço duplo que não bate com nenhum pedido.
+                      onChange={(e) => setForm({ ...form, transportadorNome: PREFIXO_FROTA_PROPRIA + e.target.value.replace(/^\s+/, "") })}
                       placeholder="Nome do motorista, ex.: Jonathan"
                       required
                     />
