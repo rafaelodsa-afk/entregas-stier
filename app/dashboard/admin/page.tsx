@@ -32,15 +32,44 @@ export default async function AdminDashboard({ searchParams }: { searchParams: {
       formaPagamento: true,
       dataPedido: true,
       alertaProblema: true,
-      alertaProblemaObservacao: true,
       alertaRejeicaoCanhoto: true,
-      alertaRejeicaoCanhotoObservacao: true,
       alertaRejeicaoComprovante: true,
+    },
+  });
+
+  // Os textos de observação ficam FORA da consulta principal de propósito:
+  // só algumas dezenas de pedidos têm algum, mas, incluídos ali, o nome de
+  // cada um desses três campos era repetido nas dez mil linhas — mais de 1 MB
+  // de peso extra pro navegador processar, quase tudo vazio. Aqui vêm só os
+  // que realmente têm texto, e são encaixados de volta logo abaixo, então as
+  // telas continuam recebendo exatamente o mesmo formato de antes.
+  const observacoes = await prisma.pedido.findMany({
+    where: {
+      OR: [
+        { alertaProblemaObservacao: { not: null } },
+        { alertaRejeicaoCanhotoObservacao: { not: null } },
+        { alertaRejeicaoComprovanteObservacao: { not: null } },
+      ],
+    },
+    select: {
+      id: true,
+      alertaProblemaObservacao: true,
+      alertaRejeicaoCanhotoObservacao: true,
       alertaRejeicaoComprovanteObservacao: true,
     },
   });
+  const observacaoPorPedido = new Map(observacoes.map((o) => [o.id, o]));
+
   const transportadores = [...new Set(pedidos.map((p) => p.transportador))].sort();
-  const pedidosComLinks = pedidos.map(comLinksDeArquivo);
+  const pedidosComLinks = pedidos.map((p) => {
+    const obs = observacaoPorPedido.get(p.id);
+    return comLinksDeArquivo({
+      ...p,
+      alertaProblemaObservacao: obs?.alertaProblemaObservacao ?? null,
+      alertaRejeicaoCanhotoObservacao: obs?.alertaRejeicaoCanhotoObservacao ?? null,
+      alertaRejeicaoComprovanteObservacao: obs?.alertaRejeicaoComprovanteObservacao ?? null,
+    });
+  });
 
   return (
     <div>

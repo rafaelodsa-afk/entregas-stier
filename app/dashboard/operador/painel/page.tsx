@@ -15,10 +15,20 @@ export default async function PainelOperador() {
 
   // Mesma regra de visibilidade da aba Pedidos: em Reentrega some daqui até
   // ser reatribuído.
+  // Só as cinco colunas que o painel usa. Sem o select, o Prisma trazia as
+  // ~30 colunas de cada pedido do transportador — pra quem tem alguns
+  // milhares, era mais de 4 MB por abertura pra usar cinco campos.
   const pedidos = await prisma.pedido.findMany({
     where: {
       transportador: { equals: (sessao.transportadorNome ?? "___nenhum___").trim(), mode: "insensitive" },
       statusEntrega: { not: "REENTREGA" },
+    },
+    select: {
+      statusEntrega: true,
+      statusFinanceiro: true,
+      comprovantePagamentoUrl: true,
+      cidade: true,
+      dataPedido: true,
     },
   });
 

@@ -27,7 +27,15 @@ export default async function ArmazenamentoPage() {
   const [resultadoTamanho, arquivos, pedidos, exportacoes] = await Promise.all([
     prisma.$queryRaw<{ tamanho: bigint }[]>`SELECT pg_database_size(current_database()) AS tamanho`,
     listarTodosOsArquivosR2(),
-    prisma.pedido.findMany({ select: { id: true, dataPrevistaEntrega: true, dataCriacao: true } }),
+    // Agrupa por mês no próprio banco. Antes vinham as 10 mil linhas só pra
+    // serem contadas aqui; o resultado é idêntico (conferido mês a mês), mas
+    // volta como uma dúzia de linhas em vez de dez mil.
+    prisma.$queryRaw<{ mes: string; qtd: number }[]>`
+      SELECT to_char(COALESCE("dataPrevistaEntrega", "dataCriacao"), 'YYYY-MM') AS mes,
+             COUNT(*)::int AS qtd
+      FROM "Pedido"
+      GROUP BY 1
+    `,
     prisma.exportacaoMensal.findMany(),
   ]);
 
@@ -38,13 +46,8 @@ export default async function ArmazenamentoPage() {
   // Mês de referência de cada pedido: data prevista de entrega quando
   // existe, senão a data de criação — assim todo pedido cai em algum mês,
   // mesmo os antigos que nunca tiveram essa data preenchida.
-  const contagemPorMes = new Map<string, number>();
-  for (const p of pedidos) {
-    const data = p.dataPrevistaEntrega ?? p.dataCriacao;
-    const d = new Date(data);
-    const chave = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
-    contagemPorMes.set(chave, (contagemPorMes.get(chave) ?? 0) + 1);
-  }
+  const contagemPorMes = new Map(pedidos.map((p) => [p.mes, p.qtd]));
+  const totalPedidos = pedidos.reduce((soma, p) => soma + p.qtd, 0);
   const mesesOrdenados = [...contagemPorMes.keys()].sort();
   const primeiroMes = mesesOrdenados[0];
   const ultimoMes = mesesOrdenados[mesesOrdenados.length - 1];
@@ -60,7 +63,7 @@ export default async function ArmazenamentoPage() {
 
       <div className="kpi-grid">
         <div className="kpi-card">
-          <div className="kpi-value">{pedidos.length}</div>
+          <div className="kpi-value">{totalPedidos}</div>
           <div className="kpi-label">Pedidos no banco</div>
         </div>
         <div className="kpi-card amber">

@@ -16,13 +16,22 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const sessao = token ? await verifySession(token) : null;
   if (!sessao) redirect("/login");
 
+  // Este layout envolve TODAS as telas do sistema, então o que estiver aqui
+  // é cobrado em cada navegação. Eram duas contagens separadas (duas idas ao
+  // banco); agora é uma consulta só que traz as duas de uma vez.
   const podeVerAlerta = podeVerTudo(sessao.papel);
-  const [reentregasPendentes, pedidosComAlertaProblema] = podeVerAlerta
-    ? await Promise.all([
-        prisma.pedido.count({ where: { statusEntrega: "REENTREGA" } }),
-        prisma.pedido.count({ where: { alertaProblema: true } }),
-      ])
-    : [0, 0];
+  let reentregasPendentes = 0;
+  let pedidosComAlertaProblema = 0;
+  if (podeVerAlerta) {
+    const [contagens] = await prisma.$queryRaw<{ reentregas: bigint; alertas: bigint }[]>`
+      SELECT
+        COUNT(*) FILTER (WHERE "statusEntrega" = 'REENTREGA') AS reentregas,
+        COUNT(*) FILTER (WHERE "alertaProblema") AS alertas
+      FROM "Pedido"
+    `;
+    reentregasPendentes = Number(contagens?.reentregas ?? 0);
+    pedidosComAlertaProblema = Number(contagens?.alertas ?? 0);
+  }
 
   const abas = [];
   if (podeVerTudo(sessao.papel)) {
