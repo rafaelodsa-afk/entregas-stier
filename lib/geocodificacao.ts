@@ -20,6 +20,15 @@ async function buscarCoordenadaNoNominatim(cidade: string): Promise<{ latitude: 
 
 // Recebe uma lista de nomes de cidade e devolve as coordenadas de cada uma
 // (do cache quando já tiver, buscando no serviço externo só as que faltam).
+// Quantas cidades novas podem ser buscadas no serviço externo em UMA abertura
+// de tela. Cada cidade nova custa uma ida ao Nominatim mais 1,1s de espera
+// obrigatória; sem esse teto, uma planilha que trouxesse 20 cidades novas
+// deixaria a tela de Gráficos mais de 20 segundos carregando (ou estourando o
+// tempo limite do servidor). As que sobrarem são buscadas nas próximas
+// aberturas, até o cache ficar completo — o mapa só fica sem esses pontos
+// enquanto isso.
+const MAXIMO_CIDADES_NOVAS_POR_VEZ = 3;
+
 export async function obterCoordenadasDasCidades(nomesCidade: string[]): Promise<Coordenada[]> {
   const cidadesUnicas = [...new Set(nomesCidade.map((c) => c.trim()).filter(Boolean))];
   if (cidadesUnicas.length === 0) return [];
@@ -28,7 +37,7 @@ export async function obterCoordenadasDasCidades(nomesCidade: string[]): Promise
     where: { cidade: { in: cidadesUnicas } },
   });
   const cacheadas = new Set(emCache.map((c) => c.cidade));
-  const faltando = cidadesUnicas.filter((c) => !cacheadas.has(c));
+  const faltando = cidadesUnicas.filter((c) => !cacheadas.has(c)).slice(0, MAXIMO_CIDADES_NOVAS_POR_VEZ);
 
   const novas: Coordenada[] = [];
   for (const cidade of faltando) {

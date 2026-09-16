@@ -24,13 +24,11 @@ type Coordenada = { cidade: string; latitude: number; longitude: number };
 const CORES_TRANSPORTADOR = ["#e3a73e", "#4e8fe3", "#3fbf8f", "#a78bfa", "#f0883e", "#e15c4a", "#8d95a1"];
 
 export default function GraficosClient({
-  pedidos,
   todosPedidos,
   transportadores,
   coordenadas,
   filtroTransportador,
 }: {
-  pedidos: PedidoResumo[];
   todosPedidos: PedidoResumo[];
   transportadores: string[];
   coordenadas: Coordenada[];
@@ -39,8 +37,13 @@ export default function GraficosClient({
   const [dataInicial, setDataInicial] = useState("");
   const [dataFinal, setDataFinal] = useState("");
 
-  const pedidosFiltrados = pedidos.filter((p) => dataNoIntervalo(p.dataPedido, dataInicial, dataFinal));
   const todosFiltrados = todosPedidos.filter((p) => dataNoIntervalo(p.dataPedido, dataInicial, dataFinal));
+  // Antes o servidor mandava a lista já filtrada por transportador junto com a
+  // completa (a mesma coisa duas vezes). Agora só a completa vem, e o recorte
+  // por transportador é feito aqui — mesmo resultado, metade dos dados.
+  const pedidosFiltrados = filtroTransportador
+    ? todosFiltrados.filter((p) => p.transportador.toLowerCase() === filtroTransportador.toLowerCase())
+    : todosFiltrados;
 
   const porStatus = Object.entries(LABEL_STATUS)
     .map(([status, label]) => ({

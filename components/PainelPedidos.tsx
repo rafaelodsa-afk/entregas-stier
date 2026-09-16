@@ -41,6 +41,12 @@ function chaveStatusFiltro(p: { statusEntrega: string; finalizadoSemCanhoto: boo
   return p.statusEntrega === "ENTREGUE" && p.finalizadoSemCanhoto ? CHAVE_ENTREGUE_SEM_COMPROVANTE : p.statusEntrega;
 }
 
+// Quantas linhas a tabela desenha por vez. Os filtros, a busca e os totais
+// continuam valendo sobre TODOS os pedidos — isso aqui só evita o navegador
+// ter que montar 10 mil linhas de uma vez, que era o que travava a abertura
+// da tela. O botão "Carregar mais" revela o próximo lote.
+const LOTE_LINHAS = 200;
+
 const OPCOES_STATUS = (() => {
   const opcoes = Object.entries(LABEL_STATUS).map(([valor, rotulo]) => ({ valor, rotulo }));
   const indiceEntregue = opcoes.findIndex((o) => o.valor === "ENTREGUE");
@@ -75,6 +81,7 @@ export default function PainelPedidos({
   const [processandoLote, setProcessandoLote] = useState(false);
   const [processandoAceitar, setProcessandoAceitar] = useState(false);
   const [erroLote, setErroLote] = useState("");
+  const [limite, setLimite] = useState(LOTE_LINHAS);
 
   const opcoesTransportador = useMemo(
     () => transportadores.map((t) => ({ valor: t, rotulo: t.toUpperCase() })),
@@ -93,6 +100,27 @@ export default function PainelPedidos({
     }
     return true;
   });
+
+  // Sempre que a pessoa mexe em qualquer filtro, a contagem volta pro primeiro
+  // lote — senão ela filtraria e continuaria vendo a quantidade de linhas que
+  // tinha revelado na busca anterior. Ajuste direto no render (sem efeito),
+  // que é o jeito recomendado de reagir a mudança de prop/estado.
+  const assinaturaFiltros = [
+    buscaNormalizada,
+    [...statusFiltro].sort().join(","),
+    [...transportadorFiltro].sort().join(","),
+    dataInicial,
+    dataFinal,
+    String(apenasAlertaProblema),
+  ].join("|");
+  const [assinaturaAnterior, setAssinaturaAnterior] = useState(assinaturaFiltros);
+  if (assinaturaFiltros !== assinaturaAnterior) {
+    setAssinaturaAnterior(assinaturaFiltros);
+    setLimite(LOTE_LINHAS);
+  }
+
+  const visiveis = filtrados.slice(0, limite);
+  const restantes = filtrados.length - visiveis.length;
 
   const pendentes = filtrados.filter((p) => !["ENTREGUE", "CANCELADO", "DEVOLVIDO", "REENTREGA"].includes(p.statusEntrega));
   const acerto = filtrados.filter((p) => p.statusFinanceiro === "AGUARDANDO_ACERTO");
@@ -253,12 +281,28 @@ export default function PainelPedidos({
       {erroLote && <p className="erro" style={{ marginBottom: 12 }}>{erroLote}</p>}
 
       <TabelaPedidos
-        pedidos={filtrados}
+        pedidos={visiveis}
         podeFinalizarLegado={podeFinalizarLegado}
         idsElegiveisLote={idsElegiveisLote}
         selecionados={selecionados}
         onAlternarSelecao={alternarSelecao}
       />
+
+      {restantes > 0 && (
+        <div className="carregar-mais">
+          <span className="muted">
+            Mostrando {visiveis.length} de {filtrados.length} pedidos
+          </span>
+          <button className="btn-ghost" onClick={() => setLimite((atual) => atual + LOTE_LINHAS)}>
+            Carregar mais {Math.min(restantes, LOTE_LINHAS)}
+          </button>
+          {restantes > LOTE_LINHAS && (
+            <button className="link-botao" onClick={() => setLimite(filtrados.length)}>
+              Mostrar todos ({filtrados.length})
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }

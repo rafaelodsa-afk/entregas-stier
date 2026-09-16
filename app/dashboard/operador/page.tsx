@@ -2,7 +2,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { verifySession, COOKIE_NAME } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { comLinksAssinados } from "@/lib/r2";
+import { comLinksDeArquivo } from "@/lib/r2";
 import { geraPendenciaFinanceira } from "@/lib/pedidos";
 import ListaPedidosOperador from "@/components/ListaPedidosOperador";
 
@@ -50,7 +50,7 @@ export default async function OperadorDashboard() {
     },
   });
   const pendentes = pedidos.filter((p) => !["ENTREGUE", "CANCELADO", "DEVOLVIDO"].includes(p.statusEntrega));
-  const pedidosComLinks = await Promise.all(pedidos.map(comLinksAssinados));
+  const pedidosComLinks = pedidos.map(comLinksDeArquivo);
 
   return (
     <div>

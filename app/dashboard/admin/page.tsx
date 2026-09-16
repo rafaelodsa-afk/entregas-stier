@@ -2,7 +2,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { verifySession, COOKIE_NAME, podeVerTudo, podeFinalizarSemCanhoto } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { comLinksAssinados } from "@/lib/r2";
+import { comLinksDeArquivo } from "@/lib/r2";
 import { geraPendenciaFinanceira } from "@/lib/pedidos";
 import ImportarPlanilha from "@/components/ImportarPlanilha";
 import CriarPedido from "@/components/CriarPedido";
@@ -40,7 +40,7 @@ export default async function AdminDashboard({ searchParams }: { searchParams: {
     },
   });
   const transportadores = [...new Set(pedidos.map((p) => p.transportador))].sort();
-  const pedidosComLinks = await Promise.all(pedidos.map(comLinksAssinados));
+  const pedidosComLinks = pedidos.map(comLinksDeArquivo);
 
   return (
     <div>

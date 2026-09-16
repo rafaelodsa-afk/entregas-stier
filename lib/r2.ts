@@ -114,16 +114,27 @@ export async function baixarArquivoR2(chave: string): Promise<Buffer | null> {
   }
 }
 
-// Prepara um pedido (ou qualquer objeto com esses dois campos) trocando as
-// chaves de arquivo guardadas no banco por URLs assinadas prontas pra
-// exibir — chamado sempre que uma tela vai mostrar "Ver canhoto"/"Ver
-// comprovante".
-export async function comLinksAssinados<T extends { canhotoUrl?: string | null; comprovantePagamentoUrl?: string | null }>(
-  pedido: T
-): Promise<T> {
-  const [canhotoUrl, comprovantePagamentoUrl] = await Promise.all([
-    pedido.canhotoUrl ? gerarUrlVisualizacao(pedido.canhotoUrl) : Promise.resolve(pedido.canhotoUrl ?? null),
-    pedido.comprovantePagamentoUrl ? gerarUrlVisualizacao(pedido.comprovantePagamentoUrl) : Promise.resolve(pedido.comprovantePagamentoUrl ?? null),
-  ]);
-  return { ...pedido, canhotoUrl, comprovantePagamentoUrl };
+// Troca as chaves de arquivo guardadas no banco pelo endereço da nossa rota
+// de visualização, que assina a URL do R2 só quando a pessoa clica.
+//
+// É o substituto de comLinksAssinados nas LISTAGENS: não faz assinatura
+// nenhuma (é síncrono), então listar 10 mil pedidos não custa mais nada, e o
+// que vai pro navegador é um endereço curto em vez de uma URL assinada de
+// ~456 caracteres. A truthiness continua igual (null quando não tem arquivo),
+// então as telas seguem decidindo do mesmo jeito entre "Ver" e "Anexar".
+export function comLinksDeArquivo<
+  T extends { id: string; canhotoUrl?: string | null; comprovantePagamentoUrl?: string | null },
+>(pedido: T): T {
+  const base = `/api/pedidos/${encodeURIComponent(pedido.id)}/arquivo`;
+  return {
+    ...pedido,
+    canhotoUrl: pedido.canhotoUrl ? `${base}?tipo=canhoto` : null,
+    comprovantePagamentoUrl: pedido.comprovantePagamentoUrl ? `${base}?tipo=comprovante` : null,
+  };
 }
+
+// (Existia aqui um comLinksAssinados, que assinava o arquivo de cada pedido da
+// listagem de uma vez só. Foi substituído por comLinksDeArquivo acima: assinar
+// tudo de antemão custava alguns segundos por abertura de tela e a pessoa abre
+// no máximo um ou dois arquivos. A assinatura em si continua existindo, em
+// gerarUrlVisualizacao, chamada pela rota /api/pedidos/[id]/arquivo.)

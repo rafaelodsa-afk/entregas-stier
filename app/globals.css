@@ -320,6 +320,14 @@ button {
 .alerta-reentrega:hover {
   background: rgba(240, 136, 62, 0.2);
 }
+.carregar-mais {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 14px 10px;
+}
 .alerta-rejeicao {
   display: flex;
   align-items: center;

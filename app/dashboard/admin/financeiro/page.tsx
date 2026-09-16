@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { verifySession, COOKIE_NAME, podeVerTudo } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { ehPagamentoAVista, ehOperacaoDeVenda } from "@/lib/pedidos";
-import { comLinksAssinados } from "@/lib/r2";
+import { comLinksDeArquivo } from "@/lib/r2";
 import PainelFinanceiro from "@/components/PainelFinanceiro";
 
 export const dynamic = "force-dynamic";
@@ -40,10 +40,8 @@ export default async function FinanceiroPage() {
   const transportadores = [...new Set(transportadoresRaw.map((p) => p.transportador))].sort();
   const previstos = candidatosPrevisto.filter((p) => ehOperacaoDeVenda(p.operacao) && ehPagamentoAVista(p.formaPagamento));
 
-  const [aguardandoAcertoComLinks, historicoComLinks] = await Promise.all([
-    Promise.all(aguardandoAcerto.map(comLinksAssinados)),
-    Promise.all(historico.map(comLinksAssinados)),
-  ]);
+  const aguardandoAcertoComLinks = aguardandoAcerto.map(comLinksDeArquivo);
+  const historicoComLinks = historico.map(comLinksDeArquivo);
 
   return (
     <div>

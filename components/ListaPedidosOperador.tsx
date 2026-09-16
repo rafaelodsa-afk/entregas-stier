@@ -39,6 +39,11 @@ const STATUS_LOTE: Record<string, { proximo: string; rotuloUm: string; rotuloVar
   AGUARDANDO_CARREGAMENTO: { proximo: "EM_ROTA", rotuloUm: "Iniciar rota", rotuloVarios: "Iniciar rota nos" },
 };
 
+// Mesma ideia da tela do admin: desenha os cartões aos poucos pra não travar
+// o celular do motorista quando ele tem centenas de pedidos. Busca, filtros e
+// as ações em lote continuam considerando a lista inteira.
+const LOTE_CARTOES = 50;
+
 export default function ListaPedidosOperador({ pedidos }: { pedidos: Pedido[] }) {
   const router = useRouter();
   const [busca, setBusca] = useState("");
@@ -48,6 +53,7 @@ export default function ListaPedidosOperador({ pedidos }: { pedidos: Pedido[] })
   const [selecionados, setSelecionados] = useState<Set<string>>(new Set());
   const [processando, setProcessando] = useState(false);
   const [erroLote, setErroLote] = useState("");
+  const [limite, setLimite] = useState(LOTE_CARTOES);
 
   const buscaNormalizada = busca.trim().toLowerCase();
   const filtrados = pedidos.filter((p) => {
@@ -59,6 +65,17 @@ export default function ListaPedidosOperador({ pedidos }: { pedidos: Pedido[] })
     }
     return true;
   });
+
+  // Volta pro primeiro lote sempre que algum filtro muda.
+  const assinaturaFiltros = [buscaNormalizada, statusFiltro, dataInicial, dataFinal].join("|");
+  const [assinaturaAnterior, setAssinaturaAnterior] = useState(assinaturaFiltros);
+  if (assinaturaFiltros !== assinaturaAnterior) {
+    setAssinaturaAnterior(assinaturaFiltros);
+    setLimite(LOTE_CARTOES);
+  }
+
+  const visiveis = filtrados.slice(0, limite);
+  const restantes = filtrados.length - visiveis.length;
 
   const aguardandoAceite = filtrados.filter((p) => p.statusEntrega === "AGUARDANDO_ACEITE");
   const aguardandoCarregamento = filtrados.filter((p) => p.statusEntrega === "AGUARDANDO_CARREGAMENTO");
@@ -184,7 +201,7 @@ export default function ListaPedidosOperador({ pedidos }: { pedidos: Pedido[] })
 
       <div className="pedido-list">
         {filtrados.length === 0 && <p className="muted">Nenhum pedido encontrado.</p>}
-        {filtrados.map((p) => (
+        {visiveis.map((p) => (
           <div key={p.id} className="pedido-card">
             <div className="pedido-card-top">
               <span className="pedido-card-top-esquerda">
@@ -210,6 +227,17 @@ export default function ListaPedidosOperador({ pedidos }: { pedidos: Pedido[] })
           </div>
         ))}
       </div>
+
+      {restantes > 0 && (
+        <div className="carregar-mais">
+          <span className="muted">
+            Mostrando {visiveis.length} de {filtrados.length} pedidos
+          </span>
+          <button className="btn-ghost" onClick={() => setLimite((atual) => atual + LOTE_CARTOES)}>
+            Carregar mais {Math.min(restantes, LOTE_CARTOES)}
+          </button>
+        </div>
+      )}
     </div>
   );
 }
