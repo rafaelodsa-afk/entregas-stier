@@ -15,49 +15,54 @@ export default async function AdminDashboard({ searchParams }: { searchParams: {
   const sessao = token ? await verifySession(token) : null;
   if (!sessao || !podeVerTudo(sessao.papel)) redirect("/login");
 
-  const pedidos = await prisma.pedido.findMany({
-    orderBy: { dataCriacao: "desc" },
-    select: {
-      id: true,
-      cliente: true,
-      transportador: true,
-      statusEntrega: true,
-      statusPlanilha: true,
-      statusFinanceiro: true,
-      valorPedido: true,
-      canhotoUrl: true,
-      comprovantePagamentoUrl: true,
-      finalizadoSemCanhoto: true,
-      operacao: true,
-      formaPagamento: true,
-      dataPedido: true,
-      alertaProblema: true,
-      alertaRejeicaoCanhoto: true,
-      alertaRejeicaoComprovante: true,
-    },
-  });
-
-  // Os textos de observação ficam FORA da consulta principal de propósito:
-  // só algumas dezenas de pedidos têm algum, mas, incluídos ali, o nome de
-  // cada um desses três campos era repetido nas dez mil linhas — mais de 1 MB
-  // de peso extra pro navegador processar, quase tudo vazio. Aqui vêm só os
-  // que realmente têm texto, e são encaixados de volta logo abaixo, então as
-  // telas continuam recebendo exatamente o mesmo formato de antes.
-  const observacoes = await prisma.pedido.findMany({
-    where: {
-      OR: [
-        { alertaProblemaObservacao: { not: null } },
-        { alertaRejeicaoCanhotoObservacao: { not: null } },
-        { alertaRejeicaoComprovanteObservacao: { not: null } },
-      ],
-    },
-    select: {
-      id: true,
-      alertaProblemaObservacao: true,
-      alertaRejeicaoCanhotoObservacao: true,
-      alertaRejeicaoComprovanteObservacao: true,
-    },
-  });
+  // As duas consultas são independentes, então vão juntas: esperar uma
+  // terminar pra começar a outra custava o tempo das duas somado.
+  //
+  // A segunda existe porque os textos de observação ficam FORA da consulta
+  // principal de propósito: só algumas dezenas de pedidos têm algum, mas,
+  // incluídos ali, o nome de cada um desses três campos era repetido nas dez
+  // mil linhas — mais de 1 MB de peso extra pro navegador processar, quase
+  // tudo vazio. Aqui vêm só os que realmente têm texto, e são encaixados de
+  // volta logo abaixo, então as telas continuam recebendo exatamente o mesmo
+  // formato de antes.
+  const [pedidos, observacoes] = await Promise.all([
+    prisma.pedido.findMany({
+      orderBy: { dataCriacao: "desc" },
+      select: {
+        id: true,
+        cliente: true,
+        transportador: true,
+        statusEntrega: true,
+        statusPlanilha: true,
+        statusFinanceiro: true,
+        valorPedido: true,
+        canhotoUrl: true,
+        comprovantePagamentoUrl: true,
+        finalizadoSemCanhoto: true,
+        operacao: true,
+        formaPagamento: true,
+        dataPedido: true,
+        alertaProblema: true,
+        alertaRejeicaoCanhoto: true,
+        alertaRejeicaoComprovante: true,
+      },
+    }),
+    prisma.pedido.findMany({
+      where: {
+        OR: [
+          { alertaProblemaObservacao: { not: null } },
+          { alertaRejeicaoCanhotoObservacao: { not: null } },
+          { alertaRejeicaoComprovanteObservacao: { not: null } },
+        ],
+      },
+      select: {
+        id: true,
+        alertaProblemaObservacao: true,
+        alertaRejeicaoCanhotoObservacao: true,
+        alertaRejeicaoComprovanteObservacao: true,
+      },
+    }),
+  ]);
   const observacaoPorPedido = new Map(observacoes.map((o) => [o.id, o]));
 
   const transportadores = [...new Set(pedidos.map((p) => p.transportador))].sort();
