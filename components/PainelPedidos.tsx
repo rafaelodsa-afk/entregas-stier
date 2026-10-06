@@ -10,6 +10,7 @@ import { enviarAcao, STATUS_SEM_CANHOTO } from "@/components/PedidoAcoes";
 import { LABEL_STATUS } from "@/lib/statusLabels";
 import { dataNoIntervalo } from "@/lib/filtroPeriodo";
 import { executarEmLote } from "@/lib/emLote";
+import BotaoExportarExcel from "@/components/BotaoExportarExcel";
 
 type Pedido = {
   id: string;
@@ -297,6 +298,12 @@ export default function PainelPedidos({
             />
             Selecionar todos os {idsElegiveisLote.size} pedidos filtrados
           </label>
+          <BotaoExportarExcel
+            tipo="pedidos"
+            ids={filtrados.map((p) => p.id)}
+            rotulo={`Exportar Excel (${filtrados.length})`}
+            titulo="Baixa uma planilha formatada com exatamente os pedidos que estão filtrados na tela"
+          />
         </div>
       )}
 
@@ -318,10 +325,16 @@ export default function PainelPedidos({
               {processandoLote ? "Processando..." : `Marcar como entregue sem comprovante (${[...selecionados].filter((id) => idsElegiveisSemComprovante.has(id)).length})`}
             </button>
           )}
+          <BotaoExportarExcel
+            tipo="pedidos"
+            ids={[...selecionados]}
+            rotulo={`Exportar selecionados (${selecionados.size})`}
+            titulo="Planilha formatada só com os pedidos marcados"
+          />
           {!algumSelecionadoAceitar && !algumSelecionadoSemComprovante && !progresso && (
             <span className="muted">
-              Nenhuma ação em lote se aplica ao que está marcado (pedidos já entregues ou
-              cancelados, por exemplo) — a seleção segue valendo pra exportar.
+              Nenhuma outra ação em lote se aplica ao que está marcado (pedidos já entregues ou
+              cancelados, por exemplo).
             </span>
           )}
           <button className="link-botao" onClick={() => setSelecionados(new Set())}>

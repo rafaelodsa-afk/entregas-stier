@@ -9,6 +9,7 @@ import FiltroTransportador from "@/components/FiltroTransportador";
 import FiltroPeriodo from "@/components/FiltroPeriodo";
 import { dataNoIntervalo } from "@/lib/filtroPeriodo";
 import { LABEL_STATUS, COR_STATUS } from "@/lib/statusLabels";
+import BotaoExportarExcel from "@/components/BotaoExportarExcel";
 
 type PedidoResumo = {
   statusEntrega: string;
@@ -77,6 +78,11 @@ export default function GraficosClient({
       <div className="filtros-topo">
         <FiltroTransportador transportadores={transportadores} />
         <FiltroPeriodo dataInicial={dataInicial} dataFinal={dataFinal} onChangeInicial={setDataInicial} onChangeFinal={setDataFinal} />
+        <BotaoExportarExcel
+          tipo="pedidos"
+          rotulo="Exportar Excel"
+          titulo="Planilha formatada com panorama por status, resumo por transportador e uma aba por transportador"
+        />
       </div>
 
       <div className="graficos-grid">

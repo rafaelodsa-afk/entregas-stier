@@ -8,6 +8,7 @@ import FiltroPeriodo from "@/components/FiltroPeriodo";
 import { dataNoIntervalo } from "@/lib/filtroPeriodo";
 import { formatarDataPura } from "@/lib/formatarData";
 import { executarEmLote } from "@/lib/emLote";
+import BotaoExportarExcel from "@/components/BotaoExportarExcel";
 
 type Pedido = {
   id: string;
@@ -163,6 +164,12 @@ export default function ListaPedidosOperador({ pedidos }: { pedidos: Pedido[] })
             />
             Selecionar todos os {elegiveisLote.length} pedidos filtrados
           </label>
+          <BotaoExportarExcel
+            tipo="pedidos"
+            ids={filtrados.map((p) => p.id)}
+            rotulo={`Exportar Excel (${filtrados.length})`}
+            titulo="Planilha formatada com os seus pedidos que estão filtrados na tela"
+          />
           {aguardandoAceite.length > 0 && (
             <button
               className="btn-ghost"

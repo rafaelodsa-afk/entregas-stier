@@ -7,6 +7,7 @@ import FinanceiroHistorico from "@/components/FinanceiroHistorico";
 import FiltroMultiplo from "@/components/FiltroMultiplo";
 import FiltroPeriodo from "@/components/FiltroPeriodo";
 import { dataNoIntervalo } from "@/lib/filtroPeriodo";
+import BotaoExportarExcel from "@/components/BotaoExportarExcel";
 
 type PedidoPrevisto = {
   id: string;
@@ -107,6 +108,11 @@ export default function PainelFinanceiro({
         <FiltroMultiplo rotulo="Status financeiro" opcoes={OPCOES_STATUS_FINANCEIRO} selecionados={statusFiltro} onChange={setStatusFiltro} />
         <FiltroMultiplo rotulo="Transportadores" opcoes={opcoesTransportador} selecionados={transportadorFiltro} onChange={setTransportadorFiltro} />
         <FiltroPeriodo dataInicial={dataInicial} dataFinal={dataFinal} onChangeInicial={setDataInicial} onChangeFinal={setDataFinal} />
+        <BotaoExportarExcel
+          tipo="financeiro"
+          rotulo="Exportar Excel"
+          titulo="Planilha formatada com panorama, aguardando acerto, previsto e histórico de recebidos"
+        />
       </div>
 
       {mostraPrevisto && (
