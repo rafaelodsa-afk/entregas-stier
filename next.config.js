@@ -6,6 +6,15 @@ const nextConfig = {
   },
   // Não revela "Next.js" no cabeçalho X-Powered-By das respostas.
   poweredByHeader: false,
+  // A rota de relatórios lê o logo do disco pra colocar na capa da planilha.
+  // Arquivos de /public são servidos pela CDN e não entram automaticamente no
+  // pacote da função — sem isso o logo existe no site mas não no servidor que
+  // gera a planilha (a planilha sairia sem a imagem).
+  experimental: {
+    outputFileTracingIncludes: {
+      "/api/relatorios": ["./public/logo-stier.png"],
+    },
+  },
   async headers() {
     return [
       {

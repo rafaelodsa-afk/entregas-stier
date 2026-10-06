@@ -1,3 +1,12 @@
+// Prefixo travado dos motoristas da frota própria (o cadastro de usuário
+// força ele), e o nome do "balde" compartilhado da frota.
+export const PREFIXO_FROTA_PROPRIA = "Frota Própria";
+
+// Pedido de veículo da frota que a planilha não vinculou a ninguém. Como
+// qualquer motorista pode usar o veículo, o pedido fica visível pra TODOS os
+// motoristas da frota própria, e quem pegar assume.
+export const FROTA_PROPRIA_COMPARTILHADA = "Frota Própria";
+
 // Nomes alternativos conhecidos (motorista/veículo específico, erro de
 // digitação, maiúscula diferente) que na verdade são o MESMO transportador
 // — a chave é sempre a forma normalizada (sem espaço nas pontas, minúscula)
@@ -35,8 +44,8 @@ const ALIASES_TRANSPORTADOR: Record<string, string> = {
   "murilo (frota propria - 190)": "Frota Própria – Murilo",
   "murilo (frota própria - master)": "Frota Própria – Murilo",
   "murilo (frota propria - master)": "Frota Própria – Murilo",
-  // Variante que começou a vir da planilha depois da primeira correção —
-  // sem "frota própria" no meio, só o veículo.
+  // Variantes que vêm com o motorista nomeado seguem indo pra ele — é dele
+  // que a entrega foi, independente de qual veículo da frota ele usou.
   "murilo (master - 190)": "Frota Própria – Murilo",
   "murilo (master - 170)": "Frota Própria – Murilo",
   "murilo (190)": "Frota Própria – Murilo",
@@ -44,6 +53,27 @@ const ALIASES_TRANSPORTADOR: Record<string, string> = {
   murilo: "Frota Própria – Murilo",
   "frota própria – murilo": "Frota Própria – Murilo",
   "frota propria - murilo": "Frota Própria – Murilo",
+  // Veículo da frota SEM motorista nomeado na planilha. Qualquer motorista
+  // pode rodar com esses carros, então não dá pra adivinhar de quem é a
+  // entrega: cai no balde compartilhado, que todo motorista da frota enxerga
+  // e qualquer um pode assumir (ver FROTA_PROPRIA_COMPARTILHADA abaixo).
+  "master - 190": FROTA_PROPRIA_COMPARTILHADA,
+  "master-190": FROTA_PROPRIA_COMPARTILHADA,
+  "master 190": FROTA_PROPRIA_COMPARTILHADA,
+  "master - 170": FROTA_PROPRIA_COMPARTILHADA,
+  "master-170": FROTA_PROPRIA_COMPARTILHADA,
+  "master 170": FROTA_PROPRIA_COMPARTILHADA,
+  master: FROTA_PROPRIA_COMPARTILHADA,
+  "190": FROTA_PROPRIA_COMPARTILHADA,
+  "170": FROTA_PROPRIA_COMPARTILHADA,
+  "frota própria - 190": FROTA_PROPRIA_COMPARTILHADA,
+  "frota propria - 190": FROTA_PROPRIA_COMPARTILHADA,
+  "frota própria - 170": FROTA_PROPRIA_COMPARTILHADA,
+  "frota propria - 170": FROTA_PROPRIA_COMPARTILHADA,
+  "frota própria - master": FROTA_PROPRIA_COMPARTILHADA,
+  "frota propria - master": FROTA_PROPRIA_COMPARTILHADA,
+  "frota própria": FROTA_PROPRIA_COMPARTILHADA,
+  "frota propria": FROTA_PROPRIA_COMPARTILHADA,
 };
 
 // Aplica os apelidos conhecidos acima; se o nome não bater com nenhum deles
@@ -59,4 +89,53 @@ export function normalizarNomeTransportador(bruto: string): string {
   const aparado = bruto.trim().replace(/\s+/g, " ");
   const chave = aparado.toLowerCase();
   return ALIASES_TRANSPORTADOR[chave] ?? aparado;
+}
+
+function paraComparar(nome: string) {
+  return nome.trim().replace(/\s+/g, " ").toLowerCase();
+}
+
+/**
+ * É um motorista da frota própria? O cadastro de usuário obriga o prefixo
+ * "Frota Própria – " pra esse tipo de conta, então o próprio nome já diz.
+ */
+export function ehMotoristaDaFrota(transportadorNome: string | null | undefined): boolean {
+  const nome = paraComparar(transportadorNome ?? "");
+  return nome.startsWith("frota própria") || nome.startsWith("frota propria");
+}
+
+/**
+ * Todos os nomes de transportador que uma sessão pode enxergar.
+ *
+ * Transportador terceirizado: só o próprio nome.
+ * Motorista da frota própria: o próprio nome MAIS o balde compartilhado da
+ * frota — pedido de veículo próprio que a planilha não vinculou a ninguém
+ * aparece pra todos os motoristas, e quem pegar assume.
+ *
+ * Centralizado aqui de propósito: é a regra de isolamento de dados do
+ * sistema, e ela precisa ser idêntica na listagem, no painel, na ação sobre
+ * um pedido, na abertura de arquivo e na exportação.
+ */
+export function nomesVisiveisParaTransportador(transportadorNome: string | null | undefined): string[] {
+  const nome = (transportadorNome ?? "").trim().replace(/\s+/g, " ");
+  if (!nome) return ["___nenhum___"];
+  if (!ehMotoristaDaFrota(nome)) return [nome];
+  // Evita repetir o mesmo nome caso a conta seja o próprio balde.
+  if (paraComparar(nome) === paraComparar(FROTA_PROPRIA_COMPARTILHADA)) return [nome];
+  return [nome, FROTA_PROPRIA_COMPARTILHADA];
+}
+
+/** Filtro Prisma pronto, sem diferenciar maiúscula/minúscula nem espaço extra. */
+export function filtroTransportadorVisivel(transportadorNome: string | null | undefined) {
+  const nomes = nomesVisiveisParaTransportador(transportadorNome);
+  return { OR: nomes.map((n) => ({ transportador: { equals: n, mode: "insensitive" as const } })) };
+}
+
+/** O pedido deste transportador está visível pra essa sessão? */
+export function podeAcessarPedidoDoTransportador(
+  transportadorDoPedido: string,
+  transportadorNomeSessao: string | null | undefined
+): boolean {
+  const visiveis = nomesVisiveisParaTransportador(transportadorNomeSessao).map(paraComparar);
+  return visiveis.includes(paraComparar(transportadorDoPedido));
 }

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { podeVerTudo, type Papel } from "@/lib/auth";
 import { criarOuReatribuirPedido } from "@/lib/pedidos";
+import { filtroTransportadorVisivel } from "@/lib/transportador";
 
 function papelDaSessao(req: NextRequest) {
   return (req.headers.get("x-user-papel") ?? "TRANSPORTADOR") as Papel;
@@ -14,9 +15,7 @@ export async function GET(req: NextRequest) {
   // Comparação sem diferenciar maiúsculas/minúsculas: um espaço a mais ou
   // uma letra maiúscula diferente no cadastro não pode esconder pedidos do
   // próprio transportador nem (na direção oposta) nunca mostrar de outro.
-  const where = podeVerTudo(papel)
-    ? {}
-    : { transportador: { equals: transportador || "___nenhum___", mode: "insensitive" as const } };
+  const where = podeVerTudo(papel) ? {} : filtroTransportadorVisivel(transportador);
   const pedidos = await prisma.pedido.findMany({
     where,
     orderBy: { dataCriacao: "desc" },

@@ -3,13 +3,19 @@ import { prisma } from "@/lib/db";
 import { podeVerTudo, type Papel } from "@/lib/auth";
 import { geraPendenciaFinanceira, ehOperacaoDeVenda, ehPagamentoAVista } from "@/lib/pedidos";
 import { LABEL_STATUS } from "@/lib/statusLabels";
+import { filtroTransportadorVisivel } from "@/lib/transportador";
 import {
   novaPlanilha,
   planilhaParaBuffer,
   adicionarAba,
   adicionarAbaResumoPorTransportador,
   adicionarAbaContagem,
+  adicionarCapa,
+  FORMATO_MOEDA,
+  FORMATO_INTEIRO,
+  PRIMEIRA_LINHA_DADOS,
   type Coluna,
+  type CartaoCapa,
 } from "@/lib/relatorioExcel";
 
 // Gerar a planilha de 11 mil linhas com formatação leva alguns segundos.
@@ -81,9 +87,12 @@ function rotuloStatus(p: LinhaPedido) {
   return LABEL_STATUS[p.statusEntrega] ?? p.statusEntrega;
 }
 
-// A coluna de status guarda a CHAVE (EM_ROTA, ENTREGUE...) só pra pintar, e o
-// texto legível vai numa coluna ao lado — assim a cor funciona e a pessoa lê
-// o nome normal.
+// "Entregue sem comprovante" tem cor própria na planilha, igual às telas.
+function chaveStatus(p: LinhaPedido) {
+  if (p.statusEntrega === "ENTREGUE" && p.finalizadoSemCanhoto) return "ENTREGUE_SEM_COMPROVANTE";
+  return p.statusEntrega;
+}
+
 function colunasPedido(): Coluna<LinhaPedido>[] {
   return [
     { titulo: "Nº do pedido", largura: 16, valor: (p) => p.id },
@@ -93,20 +102,19 @@ function colunasPedido(): Coluna<LinhaPedido>[] {
     { titulo: "Bairro", largura: 20, valor: (p) => p.bairro || "—" },
     { titulo: "Operação", largura: 16, valor: (p) => LABEL_OPERACAO[p.operacao] ?? p.operacao },
     { titulo: "Pagamento", largura: 16, valor: (p) => LABEL_PAGAMENTO[p.formaPagamento] ?? p.formaPagamento },
-    { titulo: "Status da entrega", largura: 30, valor: (p) => rotuloStatus(p) },
+    { titulo: "Status da entrega", largura: 30, tipo: "status", valor: (p) => rotuloStatus(p), chaveStatus },
     { titulo: "Status na planilha", largura: 18, valor: (p) => p.statusPlanilha || "—" },
     { titulo: "Financeiro", largura: 20, valor: (p) => LABEL_FINANCEIRO[p.statusFinanceiro] ?? p.statusFinanceiro },
     { titulo: "Valor", largura: 16, tipo: "moeda", valor: (p) => Number(p.valorPedido), somar: true },
     { titulo: "Data do pedido", largura: 16, tipo: "data", valor: (p) => p.dataPedido },
     { titulo: "Entregue em", largura: 16, tipo: "data", valor: (p) => p.dataEntrega },
-    { titulo: "Tem canhoto", largura: 14, valor: (p) => (p.canhotoUrl ? "Sim" : "Não") },
-    { titulo: "Tem comprovante", largura: 16, valor: (p) => (p.comprovantePagamentoUrl ? "Sim" : "Não") },
+    { titulo: "Tem canhoto", largura: 14, tipo: "sim_nao", valor: (p) => (p.canhotoUrl ? "Sim" : "Não") },
+    { titulo: "Tem comprovante", largura: 16, tipo: "sim_nao", valor: (p) => (p.comprovantePagamentoUrl ? "Sim" : "Não") },
   ];
 }
 
 const COLUNA_TRANSPORTADOR = "C"; // 3ª coluna de colunasPedido()
 const COLUNA_VALOR = "K"; // 11ª coluna de colunasPedido()
-const PRIMEIRA_LINHA_DADOS = 5; // cabeçalho fica na linha 4
 
 function nomeArquivo(prefixo: string) {
   const agora = new Date();
@@ -117,6 +125,7 @@ function nomeArquivo(prefixo: string) {
 export async function POST(req: NextRequest) {
   const papel = (req.headers.get("x-user-papel") ?? "TRANSPORTADOR") as Papel;
   const transportadorSessao = decodeURIComponent(req.headers.get("x-user-transportador") ?? "").trim();
+  const nomeUsuario = decodeURIComponent(req.headers.get("x-user-nome") ?? "sistema");
   const ehVisaoTotal = podeVerTudo(papel);
 
   let body: Record<string, any> = {};
@@ -131,15 +140,9 @@ export async function POST(req: NextRequest) {
   // aplicados no navegador), a planilha sai exatamente igual ao que ela vê.
   const idsPedidos: string[] | null = Array.isArray(body.ids) && body.ids.length > 0 ? body.ids.map(String) : null;
 
-  // Transportador só exporta os próprios pedidos — mesma regra das telas.
-  const whereBase = ehVisaoTotal
-    ? {}
-    : {
-        transportador: {
-          equals: transportadorSessao || "___nenhum___",
-          mode: "insensitive" as const,
-        },
-      };
+  // Transportador só exporta o que ele vê nas telas — mesma regra central
+  // (inclui o balde compartilhado da frota, pra motorista da frota própria).
+  const whereBase = ehVisaoTotal ? {} : filtroTransportadorVisivel(transportadorSessao);
 
   const wb = novaPlanilha();
 
@@ -181,6 +184,27 @@ export async function POST(req: NextRequest) {
     const somaPrevisto = previstos.reduce((s, p) => s + Number(p.valorPedido), 0);
     const somaAcerto = aguardandoAcerto.reduce((s, p) => s + Number(p.valorPedido), 0);
     const somaPago = pagos.reduce((s, p) => s + Number(p.valorPedido), 0);
+
+    adicionarCapa(wb, {
+      titulo: "Relatório Financeiro",
+      subtitulo: "Acertos a receber, previsto e histórico",
+      geradoPor: nomeUsuario,
+      cartoes: [
+        { rotulo: "Aguardando acerto", valor: somaAcerto, formato: FORMATO_MOEDA, destaque: true },
+        { rotulo: "Pedidos aguardando acerto", valor: aguardandoAcerto.length, formato: FORMATO_INTEIRO, destaque: true },
+        { rotulo: "Previsto (ainda não entregue)", valor: somaPrevisto, formato: FORMATO_MOEDA },
+        { rotulo: "Pedidos previstos", valor: previstos.length, formato: FORMATO_INTEIRO },
+        { rotulo: "Já recebido (pago)", valor: somaPago, formato: FORMATO_MOEDA },
+        { rotulo: "Pedidos já pagos", valor: pagos.length, formato: FORMATO_INTEIRO },
+      ],
+      abas: [
+        { nome: "Panorama financeiro", descricao: "As três situações em uma tabela, com quantidade e valor." },
+        { nome: "Aguardando acerto", descricao: "Entregue com pagamento à vista e ainda não recebido — o que cobrar." },
+        { nome: "Resumo por transportador", descricao: "Quanto cada transportador tem a acertar (em fórmula)." },
+        { nome: "Previsto", descricao: "Venda à vista aceita, ainda não entregue — vai virar acerto." },
+        { nome: "Recebidos", descricao: "Histórico do que já foi confirmado, com quem confirmou e quando." },
+      ],
+    });
 
     adicionarAbaContagem(wb, {
       nome: "Panorama financeiro",
@@ -249,11 +273,30 @@ export async function POST(req: NextRequest) {
     : `${pedidos.length} pedido(s) — base completa`;
 
   // Panorama por status primeiro: é o que a pessoa olha antes do detalhe.
-  const porStatus = Object.keys(LABEL_STATUS)
-    .map((chave) => {
-      const doStatus = pedidos.filter((p) => p.statusEntrega === chave);
+  // "Entregue" e "Entregue (sem comprovante)" aparecem separados, igual na
+  // tela — são situações bem diferentes pra quem lê o relatório.
+  const gruposStatus: { chave: string; rotulo: string; filtro: (p: LinhaPedido) => boolean }[] = [
+    ...Object.keys(LABEL_STATUS).map((chave) => ({
+      chave,
+      rotulo: LABEL_STATUS[chave],
+      filtro: (p: LinhaPedido) =>
+        chave === "ENTREGUE"
+          ? p.statusEntrega === "ENTREGUE" && !p.finalizadoSemCanhoto
+          : p.statusEntrega === chave,
+    })),
+    {
+      chave: "ENTREGUE_SEM_COMPROVANTE",
+      rotulo: "Entregue (sem comprovante)",
+      filtro: (p: LinhaPedido) => p.statusEntrega === "ENTREGUE" && p.finalizadoSemCanhoto,
+    },
+  ];
+
+  const porStatus = gruposStatus
+    .map((g) => {
+      const doStatus = pedidos.filter(g.filtro);
       return {
-        rotulo: LABEL_STATUS[chave],
+        rotulo: g.rotulo,
+        chaveStatus: g.chave,
         quantidade: doStatus.length,
         valor: doStatus.reduce((s, p) => s + Number(p.valorPedido), 0),
       };
@@ -266,6 +309,42 @@ export async function POST(req: NextRequest) {
   // razoável; na base completa fica só o resumo (que já tem o total de cada
   // um) mais o filtro automático da aba de detalhe.
   const abasPorTransportador = ehVisaoTotal && transportadores.length > 1 && transportadores.length <= 30 && pedidos.length <= 4000;
+
+  const valorTotal = pedidos.reduce((s, p) => s + Number(p.valorPedido), 0);
+  const qtdPendentes = pedidos.filter(
+    (p) => !["ENTREGUE", "CANCELADO", "DEVOLVIDO", "REENTREGA"].includes(p.statusEntrega)
+  ).length;
+  const qtdAguardandoAcerto = pedidos.filter((p) => p.statusFinanceiro === "AGUARDANDO_ACERTO").length;
+  const qtdSemCanhoto = pedidos.filter((p) => !p.canhotoUrl).length;
+
+  const cartoes: CartaoCapa[] = [
+    { rotulo: "Pedidos no relatório", valor: pedidos.length, formato: FORMATO_INTEIRO, destaque: true },
+    { rotulo: "Valor total", valor: valorTotal, formato: FORMATO_MOEDA, destaque: true },
+    { rotulo: "Pendentes de entrega", valor: qtdPendentes, formato: FORMATO_INTEIRO },
+    { rotulo: "Aguardando acerto financeiro", valor: qtdAguardandoAcerto, formato: FORMATO_INTEIRO },
+    { rotulo: "Sem canhoto anexado", valor: qtdSemCanhoto, formato: FORMATO_INTEIRO },
+    { rotulo: "Transportadores envolvidos", valor: transportadores.length, formato: FORMATO_INTEIRO },
+  ];
+
+  const descricaoAbas = [
+    { nome: "Panorama por status", descricao: "Quantos pedidos e quanto valor em cada status de entrega." },
+    { nome: "Pedidos", descricao: "O detalhe linha por linha, com filtro no cabeçalho e total que acompanha o filtro." },
+  ];
+  if (ehVisaoTotal && pedidos.length > 0) {
+    descricaoAbas.push({
+      nome: "Resumo por transportador",
+      descricao: "Quantidade, valor e participação de cada transportador (tudo em fórmula).",
+    });
+  }
+
+  adicionarCapa(wb, {
+    titulo: "Relatório de Pedidos",
+    subtitulo: idsPedidos ? "Recorte exatamente como estava na tela" : "Base completa",
+    geradoPor: nomeUsuario,
+    cartoes,
+    abas: descricaoAbas,
+    mostrarLegendaStatus: true,
+  });
 
   adicionarAbaContagem(wb, {
     nome: "Panorama por status",

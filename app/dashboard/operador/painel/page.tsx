@@ -4,6 +4,7 @@ import { verifySession, COOKIE_NAME } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { obterCoordenadasDasCidades } from "@/lib/geocodificacao";
 import PainelOperadorClient from "@/components/PainelOperadorClient";
+import { filtroTransportadorVisivel } from "@/lib/transportador";
 
 export const dynamic = "force-dynamic";
 
@@ -20,7 +21,7 @@ export default async function PainelOperador() {
   // milhares, era mais de 4 MB por abertura pra usar cinco campos.
   const pedidos = await prisma.pedido.findMany({
     where: {
-      transportador: { equals: (sessao.transportadorNome ?? "___nenhum___").trim(), mode: "insensitive" },
+      ...filtroTransportadorVisivel(sessao.transportadorNome),
       statusEntrega: { not: "REENTREGA" },
     },
     select: {

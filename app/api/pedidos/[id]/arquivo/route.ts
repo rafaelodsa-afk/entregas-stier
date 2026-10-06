@@ -2,12 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { podeVerTudo, type Papel } from "@/lib/auth";
 import { gerarUrlVisualizacao } from "@/lib/r2";
+import { podeAcessarPedidoDoTransportador } from "@/lib/transportador";
 
-// Mesma comparação tolerante usada no resto do sistema (espaço/maiúscula não
-// podem tirar do transportador o acesso ao arquivo do próprio pedido).
-function mesmoTransportador(a: string, b: string) {
-  return a.trim().toLowerCase() === b.trim().toLowerCase();
-}
+// A regra de "este pedido é visível pra essa sessão" é a mesma do resto do
+// sistema e mora em lib/transportador.ts.
 
 // Gera a URL assinada do canhoto/comprovante NA HORA do clique e manda o
 // navegador direto pra ela.
@@ -35,7 +33,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   }
 
   // Transportador só abre arquivo dos próprios pedidos — mesma regra do PATCH.
-  if (!podeVerTudo(papel) && !mesmoTransportador(pedido.transportador, transportadorSessao)) {
+  if (!podeVerTudo(papel) && !podeAcessarPedidoDoTransportador(pedido.transportador, transportadorSessao)) {
     return NextResponse.json({ erro: "Sem permissão sobre este pedido" }, { status: 403 });
   }
 

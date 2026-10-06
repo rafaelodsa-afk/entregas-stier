@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db";
 import { comLinksDeArquivo } from "@/lib/r2";
 import { geraPendenciaFinanceira } from "@/lib/pedidos";
 import ListaPedidosOperador from "@/components/ListaPedidosOperador";
+import { filtroTransportadorVisivel } from "@/lib/transportador";
 
 export const dynamic = "force-dynamic";
 
@@ -20,7 +21,9 @@ export default async function OperadorDashboard() {
     // reatribuído; nesse momento passa a existir de novo, já como
     // Aguardando aceite, só pro transportador novo.
     where: {
-      transportador: { equals: (sessao.transportadorNome ?? "___nenhum___").trim(), mode: "insensitive" },
+      // Motorista da frota também vê o balde compartilhado (veículo próprio
+      // sem motorista definido na planilha) — ver lib/transportador.ts.
+      ...filtroTransportadorVisivel(sessao.transportadorNome),
       statusEntrega: { not: "REENTREGA" },
     },
     orderBy: { dataCriacao: "desc" },
