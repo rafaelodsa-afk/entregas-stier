@@ -35,6 +35,12 @@ const ALIASES_TRANSPORTADOR: Record<string, string> = {
   "murilo (frota propria - 190)": "Frota Própria – Murilo",
   "murilo (frota própria - master)": "Frota Própria – Murilo",
   "murilo (frota propria - master)": "Frota Própria – Murilo",
+  // Variante que começou a vir da planilha depois da primeira correção —
+  // sem "frota própria" no meio, só o veículo.
+  "murilo (master - 190)": "Frota Própria – Murilo",
+  "murilo (master - 170)": "Frota Própria – Murilo",
+  "murilo (190)": "Frota Própria – Murilo",
+  "murilo (170)": "Frota Própria – Murilo",
   murilo: "Frota Própria – Murilo",
   "frota própria – murilo": "Frota Própria – Murilo",
   "frota propria - murilo": "Frota Própria – Murilo",
