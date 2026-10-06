@@ -7,6 +7,7 @@ import { geraPendenciaFinanceira } from "@/lib/pedidos";
 import ImportarPlanilha from "@/components/ImportarPlanilha";
 import CriarPedido from "@/components/CriarPedido";
 import PainelPedidos from "@/components/PainelPedidos";
+import { agruparTransportadores } from "@/lib/transportador";
 
 export const dynamic = "force-dynamic";
 
@@ -65,7 +66,9 @@ export default async function AdminDashboard({ searchParams }: { searchParams: {
   ]);
   const observacaoPorPedido = new Map(observacoes.map((o) => [o.id, o]));
 
-  const transportadores = [...new Set(pedidos.map((p) => p.transportador))].sort();
+  // Sai dos próprios pedidos, então transportador novo aparece sozinho; se a
+  // planilha trouxer a mesma empresa com grafias diferentes, vira uma só.
+  const transportadores = agruparTransportadores(pedidos.map((p) => p.transportador));
   const pedidosComLinks = pedidos.map((p) => {
     const obs = observacaoPorPedido.get(p.id);
     return comLinksDeArquivo({

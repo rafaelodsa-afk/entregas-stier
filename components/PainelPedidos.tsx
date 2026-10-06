@@ -11,6 +11,7 @@ import { LABEL_STATUS } from "@/lib/statusLabels";
 import { dataNoIntervalo } from "@/lib/filtroPeriodo";
 import { executarEmLote } from "@/lib/emLote";
 import BotaoExportarExcel from "@/components/BotaoExportarExcel";
+import { chaveTransportador } from "@/lib/transportador";
 
 type Pedido = {
   id: string;
@@ -113,11 +114,18 @@ export default function PainelPedidos({
     [transportadores]
   );
 
+  // Compara transportador pela mesma chave que o resto do sistema usa: um
+  // nome escrito com outra caixa na planilha continua caindo no filtro certo.
+  const chavesTransportadorFiltro = useMemo(
+    () => new Set([...transportadorFiltro].map(chaveTransportador)),
+    [transportadorFiltro]
+  );
+
   const buscaNormalizada = busca.trim().toLowerCase();
   const filtrados = pedidos.filter((p) => {
     if (apenasAlertaProblema && !p.alertaProblema) return false;
     if (statusFiltro.size > 0 && !chavesStatusFiltro(p).some((c) => statusFiltro.has(c))) return false;
-    if (transportadorFiltro.size > 0 && !transportadorFiltro.has(p.transportador)) return false;
+    if (transportadorFiltro.size > 0 && !chavesTransportadorFiltro.has(chaveTransportador(p.transportador))) return false;
     if (!dataNoIntervalo(p.dataPedido, dataInicial, dataFinal)) return false;
     if (buscaNormalizada) {
       const alvo = `${p.id} ${p.cliente}`.toLowerCase();

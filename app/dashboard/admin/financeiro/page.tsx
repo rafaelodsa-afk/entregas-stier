@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db";
 import { ehPagamentoAVista, ehOperacaoDeVenda } from "@/lib/pedidos";
 import { comLinksDeArquivo } from "@/lib/r2";
 import PainelFinanceiro from "@/components/PainelFinanceiro";
+import { agruparTransportadores } from "@/lib/transportador";
 
 export const dynamic = "force-dynamic";
 
@@ -37,7 +38,7 @@ export default async function FinanceiroPage() {
     }),
   ]);
 
-  const transportadores = [...new Set(transportadoresRaw.map((p) => p.transportador))].sort();
+  const transportadores = agruparTransportadores(transportadoresRaw.map((p) => p.transportador));
   const previstos = candidatosPrevisto.filter((p) => ehOperacaoDeVenda(p.operacao) && ehPagamentoAVista(p.formaPagamento));
 
   const aguardandoAcertoComLinks = aguardandoAcerto.map(comLinksDeArquivo);

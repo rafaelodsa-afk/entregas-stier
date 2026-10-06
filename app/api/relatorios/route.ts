@@ -3,7 +3,7 @@ import { prisma } from "@/lib/db";
 import { podeVerTudo, type Papel } from "@/lib/auth";
 import { geraPendenciaFinanceira, ehOperacaoDeVenda, ehPagamentoAVista } from "@/lib/pedidos";
 import { LABEL_STATUS } from "@/lib/statusLabels";
-import { filtroTransportadorVisivel } from "@/lib/transportador";
+import { filtroTransportadorVisivel, agruparTransportadores, mesmoTransportador } from "@/lib/transportador";
 import {
   novaPlanilha,
   planilhaParaBuffer,
@@ -102,7 +102,9 @@ function colunasPedido(): Coluna<LinhaPedido>[] {
     { titulo: "Bairro", largura: 20, valor: (p) => p.bairro || "—" },
     { titulo: "Operação", largura: 16, valor: (p) => LABEL_OPERACAO[p.operacao] ?? p.operacao },
     { titulo: "Pagamento", largura: 16, valor: (p) => LABEL_PAGAMENTO[p.formaPagamento] ?? p.formaPagamento },
-    { titulo: "Status da entrega", largura: 30, tipo: "status", valor: (p) => rotuloStatus(p), chaveStatus },
+    // 42 cabe o rótulo mais comprido inteiro ("Entregue (planilha) —
+    // aguardando canhoto"), sem precisar quebrar linha.
+    { titulo: "Status da entrega", largura: 42, tipo: "status", valor: (p) => rotuloStatus(p), chaveStatus },
     { titulo: "Status na planilha", largura: 18, valor: (p) => p.statusPlanilha || "—" },
     { titulo: "Financeiro", largura: 20, valor: (p) => LABEL_FINANCEIRO[p.statusFinanceiro] ?? p.statusFinanceiro },
     { titulo: "Valor", largura: 16, tipo: "moeda", valor: (p) => Number(p.valorPedido), somar: true },
@@ -227,7 +229,7 @@ export async function POST(req: NextRequest) {
     if (aguardandoAcerto.length > 0) {
       adicionarAbaResumoPorTransportador(wb, {
         nomeAbaDetalhe: "Aguardando acerto",
-        transportadores: [...new Set(aguardandoAcerto.map((p) => p.transportador))].sort(),
+        transportadores: agruparTransportadores(aguardandoAcerto.map((p) => p.transportador)),
         colunaTransportador: COLUNA_TRANSPORTADOR,
         colunaValor: COLUNA_VALOR,
         primeiraLinhaDados: PRIMEIRA_LINHA_DADOS,
@@ -267,7 +269,7 @@ export async function POST(req: NextRequest) {
     select: SELECT_PEDIDO,
   });
 
-  const transportadores = [...new Set(pedidos.map((p) => p.transportador))].sort();
+  const transportadores = agruparTransportadores(pedidos.map((p) => p.transportador));
   const rotuloRecorte = idsPedidos
     ? `${pedidos.length} pedido(s) — recorte exatamente como estava na tela (filtros/seleção aplicados)`
     : `${pedidos.length} pedido(s) — base completa`;
@@ -385,7 +387,9 @@ export async function POST(req: NextRequest) {
 
   if (abasPorTransportador) {
     for (const t of transportadores) {
-      const doTransportador = pedidos.filter((p) => p.transportador === t);
+      // Comparação pela mesma regra do sistema: se a planilha escreveu o nome
+      // com outra caixa, o pedido entra na aba certa mesmo assim.
+      const doTransportador = pedidos.filter((p) => mesmoTransportador(p.transportador, t));
       adicionarAba(wb, {
         nome: t,
         titulo: `Pedidos — ${t}`,

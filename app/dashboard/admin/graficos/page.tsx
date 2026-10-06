@@ -4,6 +4,7 @@ import { verifySession, COOKIE_NAME, podeVerTudo } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { obterCoordenadasDasCidades } from "@/lib/geocodificacao";
 import GraficosClient from "@/components/GraficosClient";
+import { agruparTransportadores } from "@/lib/transportador";
 
 export const dynamic = "force-dynamic";
 
@@ -29,7 +30,7 @@ export default async function GraficosPage({
       dataPedido: true,
     },
   });
-  const transportadores = [...new Set(todosPedidos.map((p) => p.transportador))];
+  const transportadores = agruparTransportadores(todosPedidos.map((p) => p.transportador));
 
   const filtroTransportador = searchParams.transportador ?? "";
   const pedidos = filtroTransportador

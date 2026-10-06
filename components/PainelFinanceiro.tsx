@@ -8,6 +8,7 @@ import FiltroMultiplo from "@/components/FiltroMultiplo";
 import FiltroPeriodo from "@/components/FiltroPeriodo";
 import { dataNoIntervalo } from "@/lib/filtroPeriodo";
 import BotaoExportarExcel from "@/components/BotaoExportarExcel";
+import { chaveTransportador } from "@/lib/transportador";
 
 type PedidoPrevisto = {
   id: string;
@@ -71,8 +72,13 @@ export default function PainelFinanceiro({
 
   const buscaNormalizada = busca.trim().toLowerCase();
 
+  const chavesTransportadorFiltro = useMemo(
+    () => new Set([...transportadorFiltro].map(chaveTransportador)),
+    [transportadorFiltro]
+  );
+
   function passa(id: string, cliente: string, transportador: string, dataPedido: Date | null) {
-    if (transportadorFiltro.size > 0 && !transportadorFiltro.has(transportador)) return false;
+    if (transportadorFiltro.size > 0 && !chavesTransportadorFiltro.has(chaveTransportador(transportador))) return false;
     if (!dataNoIntervalo(dataPedido, dataInicial, dataFinal)) return false;
     if (buscaNormalizada) {
       const alvo = `${id} ${cliente}`.toLowerCase();

@@ -91,8 +91,57 @@ export function normalizarNomeTransportador(bruto: string): string {
   return ALIASES_TRANSPORTADOR[chave] ?? aparado;
 }
 
-function paraComparar(nome: string) {
-  return nome.trim().replace(/\s+/g, " ").toLowerCase();
+/**
+ * Chave de comparação de transportador: sem espaço sobrando e sem diferença
+ * de maiúscula. É o que o sistema usa pra decidir que dois nomes são o MESMO
+ * transportador.
+ */
+export function chaveTransportador(nome: string | null | undefined): string {
+  return (nome ?? "").trim().replace(/\s+/g, " ").toLowerCase();
+}
+
+const paraComparar = chaveTransportador;
+
+/** Dois nomes de transportador são o mesmo? */
+export function mesmoTransportador(a: string | null | undefined, b: string | null | undefined): boolean {
+  return chaveTransportador(a) === chaveTransportador(b);
+}
+
+/**
+ * Recebe os nomes de transportador como estão gravados nos pedidos e devolve
+ * UM por transportador, já ordenado, pra montar filtros e listas.
+ *
+ * Transportador novo entra sozinho: a lista sai dos próprios pedidos, sem
+ * cadastro prévio. E se a planilha trouxer a mesma empresa escrita de jeitos
+ * diferentes ("Transportes ABC" e "TRANSPORTES ABC"), as duas viram uma
+ * opção só — fica a grafia que mais aparece, que normalmente é a certa.
+ */
+export function agruparTransportadores(nomes: (string | null | undefined)[]): string[] {
+  const porChave = new Map<string, Map<string, number>>();
+  for (const bruto of nomes) {
+    const nome = (bruto ?? "").trim().replace(/\s+/g, " ");
+    if (!nome) continue;
+    const chave = nome.toLowerCase();
+    const grafias = porChave.get(chave) ?? new Map<string, number>();
+    grafias.set(nome, (grafias.get(nome) ?? 0) + 1);
+    porChave.set(chave, grafias);
+  }
+
+  const escolhidos: string[] = [];
+  for (const grafias of porChave.values()) {
+    let melhor = "";
+    let maisVezes = -1;
+    for (const [grafia, vezes] of grafias) {
+      // Empate fica com a grafia alfabeticamente menor, só pra ser estável
+      // entre uma geração e outra.
+      if (vezes > maisVezes || (vezes === maisVezes && grafia.localeCompare(melhor, "pt-BR") < 0)) {
+        melhor = grafia;
+        maisVezes = vezes;
+      }
+    }
+    escolhidos.push(melhor);
+  }
+  return escolhidos.sort((a, b) => a.localeCompare(b, "pt-BR"));
 }
 
 /**

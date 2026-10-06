@@ -51,6 +51,10 @@ export const FORMATO_DATA = "dd/mm/yyyy";
 export const FORMATO_PCT = "0.0%";
 
 const LINHA_CABECALHO = 6; // capa das abas ocupa as 5 primeiras linhas
+
+// Recuo (em caracteres) que o texto da faixa precisa pra não ficar embaixo
+// do logo. O logo é desenhado com ~132px de largura, que dá por volta disso.
+const RECUO_APOS_LOGO = 19;
 const PRIMEIRA_LINHA_DADOS = LINHA_CABECALHO + 1;
 
 export { PRIMEIRA_LINHA_DADOS };
@@ -95,6 +99,36 @@ export type Coluna<T> = {
   chaveStatus?: (item: T) => string;
 };
 
+/**
+ * Nome de aba que o Excel aceita e que não colide com outra já criada.
+ *
+ * O Excel recusa : \ / ? * [ ] e corta em 31 caracteres — então dois
+ * transportadores com nome comprido e começo parecido virariam a MESMA aba e
+ * a gravação quebraria ("worksheet already exists"). Como vão entrar
+ * transportadores novos com o tempo, isso resolve de uma vez: o nome é
+ * limpo, encurtado e, se ainda assim repetir, ganha um sufixo.
+ */
+function nomeAbaUnico(wb: ExcelJS.Workbook, bruto: string): string {
+  const limpo = (bruto ?? "").replace(/[:\\/?*[\]]/g, "-").trim() || "Sem nome";
+  let candidato = limpo.slice(0, 31);
+  let n = 2;
+  while (wb.worksheets.some((w) => w.name.toLowerCase() === candidato.toLowerCase())) {
+    const sufixo = ` (${n})`;
+    candidato = limpo.slice(0, 31 - sufixo.length) + sufixo;
+    n += 1;
+  }
+  return candidato;
+}
+
+/**
+ * Escapa o nome da aba pra usar dentro de fórmula. No Excel, aspa simples no
+ * nome da aba é escrita dobrada — sem isso, um transportador como
+ * "D'Angelo Transportes" quebraria todas as fórmulas do resumo.
+ */
+function abaParaFormula(nome: string): string {
+  return `'${nome.replace(/'/g, "''")}'`;
+}
+
 function borda(celula: ExcelJS.Cell, cor = BORDA) {
   celula.border = {
     top: { style: "thin", color: { argb: cor } },
@@ -137,20 +171,24 @@ function faixaDeMarca(aba: ExcelJS.Worksheet, wb: ExcelJS.Workbook, titulo: stri
   aba.getRow(5).height = 8;
 
   const temLogo = idDoLogo(wb) !== null;
-  // Texto começa depois do espaço do logo quando ele existe.
-  const colTexto = temLogo ? 3 : 1;
+  // Título e subtítulo ocupam a LARGURA INTEIRA da faixa e só recuam o
+  // bastante pra não passar por baixo do logo. Antes eles começavam na
+  // terceira coluna e eram mesclados só até o fim da tabela — numa aba de 3
+  // ou 4 colunas isso deixava o texto espremido em uma célula e o nome do
+  // relatório aparecia cortado.
+  const recuo = temLogo ? RECUO_APOS_LOGO : 1;
 
-  aba.mergeCells(2, colTexto, 2, Math.max(colTexto, colunas));
-  const cTitulo = aba.getCell(2, colTexto);
+  aba.mergeCells(2, 1, 2, colunas);
+  const cTitulo = aba.getCell(2, 1);
   cTitulo.value = titulo;
-  cTitulo.font = { name: FONTE, bold: true, size: 16, color: { argb: BRANCO } };
-  cTitulo.alignment = { vertical: "middle", horizontal: "left", indent: 1 };
+  cTitulo.font = { name: FONTE, bold: true, size: 15, color: { argb: BRANCO } };
+  cTitulo.alignment = { vertical: "middle", horizontal: "left", indent: recuo };
 
-  aba.mergeCells(3, colTexto, 3, Math.max(colTexto, colunas));
-  const cSub = aba.getCell(3, colTexto);
+  aba.mergeCells(3, 1, 3, colunas);
+  const cSub = aba.getCell(3, 1);
   cSub.value = subtitulo;
   cSub.font = { name: FONTE, size: 9.5, color: { argb: "FFB9C6D4" } };
-  cSub.alignment = { vertical: "middle", horizontal: "left", indent: 1 };
+  cSub.alignment = { vertical: "middle", horizontal: "left", indent: recuo };
 
   const id = idDoLogo(wb);
   if (id !== null) {
@@ -179,9 +217,7 @@ export function adicionarAba<T>(
   }
 ): { aba: ExcelJS.Worksheet; primeiraLinha: number; ultimaLinha: number } {
   const { nome, titulo, subtitulo, colunas, itens } = opcoes;
-  // O Excel recusa : \ / ? * [ ] no nome da aba e corta em 31 caracteres.
-  const nomeSeguro = nome.replace(/[:\\/?*[\]]/g, "-").slice(0, 31);
-  const aba = wb.addWorksheet(nomeSeguro, {
+  const aba = wb.addWorksheet(nomeAbaUnico(wb, nome), {
     views: [{ state: "frozen", ySplit: LINHA_CABECALHO, showGridLines: false }],
     pageSetup: {
       orientation: "landscape",
@@ -246,7 +282,11 @@ export function adicionarAba<T>(
           preencher(celula, estilo.fundo);
           celula.font = { name: FONTE, size: 9.5, bold: true, color: { argb: estilo.texto } };
         }
-        celula.alignment = { horizontal: "center", vertical: "middle", wrapText: true };
+        // Sem quebra de linha: a altura da linha é fixa, então um texto
+        // quebrado em duas linhas aparecia cortado pela metade. A coluna é
+        // larga o bastante pro rótulo mais comprido ("Entregue (planilha) —
+        // aguardando canhoto").
+        celula.alignment = { horizontal: "center", vertical: "middle", wrapText: false };
       } else if (c.tipo === "sim_nao") {
         const sim = String(celula.value).toLowerCase() === "sim";
         celula.font = { name: FONTE, size: 10, bold: true, color: { argb: sim ? "FF136B4A" : "FF8F2317" } };
@@ -324,7 +364,7 @@ export function adicionarAbaResumoPorTransportador(
   const { nomeAbaDetalhe, transportadores, colunaTransportador, colunaValor, primeiraLinhaDados, ultimaLinhaDados } =
     opcoes;
 
-  const aba = wb.addWorksheet("Resumo por transportador", {
+  const aba = wb.addWorksheet(nomeAbaUnico(wb, "Resumo por transportador"), {
     views: [{ state: "frozen", ySplit: LINHA_CABECALHO, showGridLines: false }],
     pageSetup: { orientation: "portrait", fitToPage: true, fitToWidth: 1, fitToHeight: 0 },
   });
@@ -356,8 +396,9 @@ export function adicionarAbaResumoPorTransportador(
   });
   linhaCab.height = 30;
 
-  const faixaTransp = `'${nomeAbaDetalhe}'!$${colunaTransportador}$${primeiraLinhaDados}:$${colunaTransportador}$${ultimaLinhaDados}`;
-  const faixaValor = `'${nomeAbaDetalhe}'!$${colunaValor}$${primeiraLinhaDados}:$${colunaValor}$${ultimaLinhaDados}`;
+  const ref = abaParaFormula(nomeAbaDetalhe);
+  const faixaTransp = `${ref}!$${colunaTransportador}$${primeiraLinhaDados}:$${colunaTransportador}$${ultimaLinhaDados}`;
+  const faixaValor = `${ref}!$${colunaValor}$${primeiraLinhaDados}:$${colunaValor}$${ultimaLinhaDados}`;
 
   transportadores.forEach((t, indice) => {
     const n = PRIMEIRA_LINHA_DADOS + indice;
