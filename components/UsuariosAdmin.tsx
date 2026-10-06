@@ -7,7 +7,7 @@ type Usuario = {
   id: string;
   username: string;
   nome: string;
-  papel: "MASTER" | "ADMIN" | "ANALISTA" | "TRANSPORTADOR";
+  papel: "MASTER" | "ADMIN" | "ANALISTA" | "ANALISTA_ROTAS" | "TRANSPORTADOR";
   tipoConta: "TRANSPORTADOR" | "MOTORISTA" | null;
   transportadorNome: string | null;
   podeCriarUsuarios: boolean;
@@ -21,6 +21,7 @@ const LABEL_PAPEL: Record<string, string> = {
   MASTER: "Master",
   ADMIN: "Admin",
   ANALISTA: "Analista",
+  ANALISTA_ROTAS: "Analista de rotas",
   TRANSPORTADOR: "Transportador",
 };
 
@@ -57,7 +58,7 @@ export default function UsuariosAdmin({ usuariosIniciais }: { usuariosIniciais: 
 
   const [excluindoId, setExcluindoId] = useState<string | null>(null);
   const [editandoId, setEditandoId] = useState<string | null>(null);
-  const [formEdicao, setFormEdicao] = useState({ nome: "", tipoConta: "TRANSPORTADOR", transportadorNome: "" });
+  const [formEdicao, setFormEdicao] = useState({ nome: "", papel: "ANALISTA", tipoConta: "TRANSPORTADOR", transportadorNome: "" });
   const [erroEdicao, setErroEdicao] = useState("");
   const [salvandoEdicao, setSalvandoEdicao] = useState(false);
 
@@ -182,6 +183,7 @@ export default function UsuariosAdmin({ usuariosIniciais }: { usuariosIniciais: 
     const transportadorNome = usuario.transportadorNome ?? "";
     setFormEdicao({
       nome: usuario.nome,
+      papel: usuario.papel,
       tipoConta: usuario.tipoConta ?? "TRANSPORTADOR",
       transportadorNome: transportadorNome.startsWith(PREFIXO_FROTA_PROPRIA)
         ? transportadorNome.slice(PREFIXO_FROTA_PROPRIA.length)
@@ -199,8 +201,15 @@ export default function UsuariosAdmin({ usuariosIniciais }: { usuariosIniciais: 
     setErroEdicao("");
     setSalvandoEdicao(true);
     try {
-      const payload: Record<string, any> = { acao: "editar", nome: formEdicao.nome };
-      if (usuario.papel === "TRANSPORTADOR") {
+      const payload: Record<string, any> = {
+        acao: "editar",
+        nome: formEdicao.nome,
+        papel: formEdicao.papel,
+      };
+      // Os campos de transportador só vão quando o papel ESCOLHIDO é
+      // transportador (não o antigo) — é isso que permite converter alguém
+      // de transportador pra analista de rotas e vice-versa.
+      if (formEdicao.papel === "TRANSPORTADOR") {
         payload.tipoConta = formEdicao.tipoConta;
         payload.transportadorNome =
           formEdicao.tipoConta === "MOTORISTA"
@@ -267,6 +276,7 @@ export default function UsuariosAdmin({ usuariosIniciais }: { usuariosIniciais: 
             <select value={form.papel} onChange={(e) => setForm({ ...form, papel: e.target.value })}>
               <option value="TRANSPORTADOR">Transportador / Motorista</option>
               <option value="ANALISTA">Analista Stier</option>
+              <option value="ANALISTA_ROTAS">Analista de rotas (dá baixa em lote)</option>
               <option value="ADMIN">Admin</option>
             </select>
           </label>
@@ -395,7 +405,19 @@ export default function UsuariosAdmin({ usuariosIniciais }: { usuariosIniciais: 
                           autoFocus
                         />
                       </label>
-                      {u.papel === "TRANSPORTADOR" && (
+                      <label>
+                        Papel
+                        <select
+                          value={formEdicao.papel}
+                          onChange={(e) => setFormEdicao({ ...formEdicao, papel: e.target.value })}
+                        >
+                          <option value="TRANSPORTADOR">Transportador / Motorista</option>
+                          <option value="ANALISTA">Analista Stier</option>
+                          <option value="ANALISTA_ROTAS">Analista de rotas (dá baixa em lote)</option>
+                          <option value="ADMIN">Admin</option>
+                        </select>
+                      </label>
+                      {formEdicao.papel === "TRANSPORTADOR" && (
                         <>
                           <label>
                             Tipo de conta

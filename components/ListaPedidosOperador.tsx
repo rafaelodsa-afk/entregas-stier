@@ -7,6 +7,7 @@ import IconeDinheiro from "@/components/IconeDinheiro";
 import FiltroPeriodo from "@/components/FiltroPeriodo";
 import { dataNoIntervalo } from "@/lib/filtroPeriodo";
 import { formatarDataPura } from "@/lib/formatarData";
+import { executarEmLote } from "@/lib/emLote";
 
 type Pedido = {
   id: string;
@@ -54,6 +55,7 @@ export default function ListaPedidosOperador({ pedidos }: { pedidos: Pedido[] })
   const [processando, setProcessando] = useState(false);
   const [erroLote, setErroLote] = useState("");
   const [limite, setLimite] = useState(LOTE_CARTOES);
+  const [progresso, setProgresso] = useState<{ feitos: number; total: number } | null>(null);
 
   const buscaNormalizada = busca.trim().toLowerCase();
   const filtrados = pedidos.filter((p) => {
@@ -79,7 +81,11 @@ export default function ListaPedidosOperador({ pedidos }: { pedidos: Pedido[] })
 
   const aguardandoAceite = filtrados.filter((p) => p.statusEntrega === "AGUARDANDO_ACEITE");
   const aguardandoCarregamento = filtrados.filter((p) => p.statusEntrega === "AGUARDANDO_CARREGAMENTO");
-  const elegiveisLote = filtrados.filter((p) => p.statusEntrega in STATUS_LOTE);
+  // Qualquer pedido da lista pode ser marcado. A ação em lote continua só
+  // valendo pra quem tem próximo passo em comum (aceitar / iniciar rota) —
+  // antes a caixinha nem aparecia nos outros, o que dava a impressão de que
+  // a seleção estava quebrada.
+  const elegiveisLote = filtrados;
 
   const statusDosSelecionados = useMemo(() => {
     const statusUnicos = new Set([...selecionados].map((id) => pedidos.find((p) => p.id === id)?.statusEntrega));
@@ -106,18 +112,21 @@ export default function ListaPedidosOperador({ pedidos }: { pedidos: Pedido[] })
     if (!alvo || ids.length === 0) return;
     setProcessando(true);
     setErroLote("");
+    setProgresso({ feitos: 0, total: ids.length });
     try {
-      const resultados = await Promise.allSettled(
-        ids.map((id) => enviarAcao(id, { acao: "avancarStatus", statusEntrega: alvo.proximo }))
+      const { falhas } = await executarEmLote(
+        ids,
+        (id) => enviarAcao(id, { acao: "avancarStatus", statusEntrega: alvo.proximo }),
+        { onProgresso: (feitos, total) => setProgresso({ feitos, total }) }
       );
-      const falhas = resultados.filter((r) => r.status === "rejected").length;
-      if (falhas > 0) {
-        setErroLote(`${falhas} de ${ids.length} pedido(s) não puderam ser atualizados. Tente novamente.`);
+      if (falhas.length > 0) {
+        setErroLote(`${falhas.length} de ${ids.length} pedido(s) não puderam ser atualizados. Os outros foram.`);
       }
       setSelecionados(new Set());
       router.refresh();
     } finally {
       setProcessando(false);
+      setProgresso(null);
     }
   }
 
@@ -144,18 +153,16 @@ export default function ListaPedidosOperador({ pedidos }: { pedidos: Pedido[] })
         <FiltroPeriodo dataInicial={dataInicial} dataFinal={dataFinal} onChangeInicial={setDataInicial} onChangeFinal={setDataFinal} />
       </div>
 
-      {(aguardandoAceite.length > 0 || aguardandoCarregamento.length > 0) && (
+      {elegiveisLote.length > 0 && (
         <div className="lote-topo">
-          {elegiveisLote.length > 0 && (
-            <label className="lote-selecionar-todos">
-              <input
-                type="checkbox"
-                checked={elegiveisLote.every((p) => selecionados.has(p.id))}
-                onChange={alternarSelecionarTodos}
-              />
-              Selecionar todos
-            </label>
-          )}
+          <label className="lote-selecionar-todos">
+            <input
+              type="checkbox"
+              checked={elegiveisLote.every((p) => selecionados.has(p.id))}
+              onChange={alternarSelecionarTodos}
+            />
+            Selecionar todos os {elegiveisLote.length} pedidos filtrados
+          </label>
           {aguardandoAceite.length > 0 && (
             <button
               className="btn-ghost"
@@ -180,6 +187,11 @@ export default function ListaPedidosOperador({ pedidos }: { pedidos: Pedido[] })
       {selecionados.size > 0 && (
         <div className="lote-barra">
           <span>{selecionados.size} selecionado(s)</span>
+          {progresso && (
+            <span className="muted">
+              processando {progresso.feitos} de {progresso.total}...
+            </span>
+          )}
           {acaoSelecao ? (
             <button
               disabled={processando}
@@ -190,7 +202,12 @@ export default function ListaPedidosOperador({ pedidos }: { pedidos: Pedido[] })
                 : `${acaoSelecao.rotuloVarios} selecionados (${selecionados.size})`}
             </button>
           ) : (
-            <span className="muted">Selecione pedidos com o mesmo status pra agir em lote</span>
+            !progresso && (
+              <span className="muted">
+                Pra agir em lote, marque pedidos que estejam todos no mesmo status (aguardando
+                aceite ou aguardando carregamento).
+              </span>
+            )
           )}
           <button className="link-botao" onClick={() => setSelecionados(new Set())}>
             Limpar seleção
@@ -205,15 +222,13 @@ export default function ListaPedidosOperador({ pedidos }: { pedidos: Pedido[] })
           <div key={p.id} className="pedido-card">
             <div className="pedido-card-top">
               <span className="pedido-card-top-esquerda">
-                {p.statusEntrega in STATUS_LOTE && (
-                  <input
-                    type="checkbox"
-                    className="lote-checkbox"
-                    checked={selecionados.has(p.id)}
-                    onChange={() => alternarSelecao(p.id)}
-                    aria-label={`Selecionar pedido #${p.id}`}
-                  />
-                )}
+                <input
+                  type="checkbox"
+                  className="lote-checkbox"
+                  checked={selecionados.has(p.id)}
+                  onChange={() => alternarSelecao(p.id)}
+                  aria-label={`Selecionar pedido #${p.id}`}
+                />
                 <span className="pedido-numero">#{p.id}</span> <BadgeStatus status={p.statusEntrega} statusPlanilha={p.statusPlanilha} finalizadoSemCanhoto={p.finalizadoSemCanhoto} />
                 {p.mostraIconeDinheiro && <IconeDinheiro />}
                 {p.statusFinanceiro === "AGUARDANDO_ACERTO" && <span className="badge badge-acerto" style={{ marginLeft: 6 }}>Aguardando acerto</span>}

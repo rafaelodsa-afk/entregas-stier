@@ -6,6 +6,7 @@ import { comprimirImagem } from "@/lib/comprimirImagem";
 import { enviarArquivoParaR2 } from "@/lib/uploadR2Client";
 import { formatarDataPura } from "@/lib/formatarData";
 import AcertoSplit from "@/components/AcertoSplit";
+import { executarEmLote } from "@/lib/emLote";
 
 type PedidoAberto = {
   id: string;
@@ -38,7 +39,72 @@ export default function FinanceiroTabela({ pedidos }: { pedidos: PedidoAberto[] 
   const [idEmAcao, setIdEmAcao] = useState<string | null>(null);
   const [erro, setErro] = useState("");
   const [arquivos, setArquivos] = useState<Record<string, File | null>>({});
+  const [selecionados, setSelecionados] = useState<Set<string>>(new Set());
+  const [processandoLote, setProcessandoLote] = useState(false);
+  const [progresso, setProgresso] = useState<{ feitos: number; total: number } | null>(null);
   const router = useRouter();
+
+  function alternarSelecao(id: string) {
+    setSelecionados((atual) => {
+      const novo = new Set(atual);
+      if (novo.has(id)) novo.delete(id);
+      else novo.add(id);
+      return novo;
+    });
+  }
+
+  function alternarSelecionarTodos() {
+    const todosJaSelecionados = lista.length > 0 && lista.every((p) => selecionados.has(p.id));
+    setSelecionados(todosJaSelecionados ? new Set() : new Set(lista.map((p) => p.id)));
+  }
+
+  // Confirmar acerto de vários de uma vez — antes só dava um por um, o que
+  // era inviável quando chegava o acerto de um transportador inteiro.
+  async function confirmarAcertoLote() {
+    const ids = [...selecionados].filter((id) => lista.some((p) => p.id === id));
+    if (ids.length === 0) return;
+    const total = ids.reduce(
+      (soma, id) => soma + Number(lista.find((p) => p.id === id)?.valorPedido ?? 0),
+      0
+    );
+    if (
+      !window.confirm(
+        `Confirmar o recebimento de ${ids.length} pedido(s), somando ${formatarValor(total)}? Eles saem de "Aguardando acerto" e vão pro histórico como pagos.`
+      )
+    ) {
+      return;
+    }
+    setProcessandoLote(true);
+    setErro("");
+    setProgresso({ feitos: 0, total: ids.length });
+    try {
+      const { falhas } = await executarEmLote(
+        ids,
+        async (id) => {
+          const res = await fetch(`/api/pedidos/${id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ acao: "confirmarAcerto" }),
+          });
+          if (!res.ok) throw new Error(id);
+        },
+        { onProgresso: (feitos, t) => setProgresso({ feitos, total: t }) }
+      );
+      const idsComFalha = new Set(falhas);
+      if (falhas.length > 0) {
+        setErro(
+          `${falhas.length} de ${ids.length} pedido(s) não puderam ser confirmados (nº ${falhas.slice(0, 10).join(", ")}${falhas.length > 10 ? "..." : ""}). Os outros foram.`
+        );
+      }
+      // Tira da tela só os que realmente deram certo.
+      setLista((atual) => atual.filter((p) => !selecionados.has(p.id) || idsComFalha.has(p.id)));
+      setSelecionados(new Set());
+      router.refresh();
+    } finally {
+      setProcessandoLote(false);
+      setProgresso(null);
+    }
+  }
 
   async function anexarComprovante(id: string) {
     const arquivo = arquivos[id];
@@ -114,6 +180,36 @@ export default function FinanceiroTabela({ pedidos }: { pedidos: PedidoAberto[] 
         <AcertoSplit pedidos={lista} />
       </div>
 
+      {lista.length > 0 && (
+        <div className="lote-topo">
+          <label className="lote-selecionar-todos">
+            <input
+              type="checkbox"
+              checked={lista.every((p) => selecionados.has(p.id))}
+              onChange={alternarSelecionarTodos}
+            />
+            Selecionar todos os {lista.length} pedidos
+          </label>
+        </div>
+      )}
+
+      {selecionados.size > 0 && (
+        <div className="lote-barra">
+          <span>{selecionados.size} selecionado(s)</span>
+          {progresso && (
+            <span className="muted">
+              processando {progresso.feitos} de {progresso.total}...
+            </span>
+          )}
+          <button disabled={processandoLote} onClick={confirmarAcertoLote}>
+            {processandoLote ? "Processando..." : `Marcar ${selecionados.size} como recebido(s)`}
+          </button>
+          <button className="link-botao" onClick={() => setSelecionados(new Set())}>
+            Limpar seleção
+          </button>
+        </div>
+      )}
+
       {erro && <p className="erro" style={{ marginTop: 10 }}>{erro}</p>}
 
       {lista.length === 0 ? (
@@ -122,6 +218,7 @@ export default function FinanceiroTabela({ pedidos }: { pedidos: PedidoAberto[] 
         <table className="pedidos-table" style={{ marginTop: 16 }}>
           <thead>
             <tr>
+              <th></th>
               <th>Nº</th>
               <th>Cliente</th>
               <th>Transportador</th>
@@ -136,6 +233,15 @@ export default function FinanceiroTabela({ pedidos }: { pedidos: PedidoAberto[] 
           <tbody>
             {lista.map((p) => (
               <tr key={p.id}>
+                <td>
+                  <input
+                    type="checkbox"
+                    className="lote-checkbox"
+                    checked={selecionados.has(p.id)}
+                    onChange={() => alternarSelecao(p.id)}
+                    aria-label={`Selecionar pedido #${p.id}`}
+                  />
+                </td>
                 <td>#{p.id}</td>
                 <td>{p.cliente}</td>
                 <td>{p.transportador}</td>

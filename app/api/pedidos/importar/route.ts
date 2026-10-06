@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { podeVerTudo } from "@/lib/auth";
+import { podeVerTudo, type Papel } from "@/lib/auth";
 import { processarImportacao, apareceNaListaDetalhada, type LinhaImportada } from "@/lib/pedidos";
 
 // A planilha é lida no navegador (biblioteca xlsx do lado do cliente) — aqui
@@ -24,11 +24,7 @@ export const maxDuration = 60;
 const LIMITE_LINHAS_POR_LOTE = 2000;
 
 export async function POST(req: NextRequest) {
-  const papel = (req.headers.get("x-user-papel") ?? "TRANSPORTADOR") as
-    | "MASTER"
-    | "ADMIN"
-    | "ANALISTA"
-    | "TRANSPORTADOR";
+  const papel = (req.headers.get("x-user-papel") ?? "TRANSPORTADOR") as Papel;
   if (!podeVerTudo(papel)) {
     return NextResponse.json({ erro: "Sem permissão para importar pedidos" }, { status: 403 });
   }

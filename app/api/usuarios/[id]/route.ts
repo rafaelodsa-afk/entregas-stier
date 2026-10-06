@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { podeGerenciarUsuariosPorPapel, hashPassword, senhaValida, MENSAGEM_REGRA_SENHA } from "@/lib/auth";
+import { podeGerenciarUsuariosPorPapel, hashPassword, senhaValida, MENSAGEM_REGRA_SENHA, type Papel } from "@/lib/auth";
 import { normalizarNomeTransportador } from "@/lib/transportador";
 
 const TIPOS_CONTA = ["TRANSPORTADOR", "MOTORISTA"];
+
+// Papéis que podem ser atribuídos editando um usuário. MASTER fica fora de
+// propósito: é único, vem do seed, e o PATCH já barra qualquer alteração nele.
+const PAPEIS_EDITAVEIS = ["ADMIN", "ANALISTA", "ANALISTA_ROTAS", "TRANSPORTADOR"];
 
 // Motorista da frota própria é vinculado pelo nome da pessoa (pode trocar de
 // veículo) — o prefixo é obrigatório e sempre igual, pra nunca quebrar o
@@ -25,11 +29,7 @@ const SELECT_SEGURO = {
 };
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
-  const papel = (req.headers.get("x-user-papel") ?? "TRANSPORTADOR") as
-    | "MASTER"
-    | "ADMIN"
-    | "ANALISTA"
-    | "TRANSPORTADOR";
+  const papel = (req.headers.get("x-user-papel") ?? "TRANSPORTADOR") as Papel;
   const podeCriarUsuarios = req.headers.get("x-user-pode-criar-usuarios") === "1";
   if (!podeGerenciarUsuariosPorPapel(papel, podeCriarUsuarios)) {
     return NextResponse.json({ erro: "Sem permissão" }, { status: 403 });
@@ -56,7 +56,24 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       return NextResponse.json({ erro: "Informe o nome" }, { status: 400 });
     }
     const data: Record<string, any> = { nome };
-    if (usuario.papel === "TRANSPORTADOR") {
+
+    // Trocar o papel é opcional: quando "papel" não vem no pedido, o atual é
+    // mantido (assim quem só renomeia alguém não muda permissão sem querer).
+    const papelNovo =
+      body.papel === undefined || body.papel === null || String(body.papel).trim() === ""
+        ? usuario.papel
+        : String(body.papel).trim().toUpperCase();
+    if (papelNovo !== usuario.papel) {
+      if (!PAPEIS_EDITAVEIS.includes(papelNovo)) {
+        return NextResponse.json({ erro: "Papel inválido" }, { status: 400 });
+      }
+      data.papel = papelNovo;
+      // Gerenciar usuários é permissão exclusiva de ADMIN — cai junto quando
+      // a pessoa deixa de ser admin, pra não ficar um acesso órfão.
+      if (papelNovo !== "ADMIN") data.podeCriarUsuarios = false;
+    }
+
+    if (papelNovo === "TRANSPORTADOR") {
       const tipoConta = String(body.tipoConta ?? "").trim().toUpperCase();
       let transportadorNome = String(body.transportadorNome ?? "").trim();
       if (!TIPOS_CONTA.includes(tipoConta)) {
@@ -71,6 +88,11 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       }
       data.tipoConta = tipoConta;
       data.transportadorNome = normalizarNomeTransportador(transportadorNome);
+    } else if (usuario.papel === "TRANSPORTADOR") {
+      // Deixou de ser transportador: desfaz o vínculo, senão sobraria um nome
+      // de transportador pendurado num acesso que agora enxerga tudo.
+      data.tipoConta = null;
+      data.transportadorNome = null;
     }
     const atualizado = await prisma.usuario.update({ where: { id: params.id }, data, select: SELECT_SEGURO });
     return NextResponse.json(atualizado);
@@ -107,11 +129,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 }
 
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
-  const papel = (req.headers.get("x-user-papel") ?? "TRANSPORTADOR") as
-    | "MASTER"
-    | "ADMIN"
-    | "ANALISTA"
-    | "TRANSPORTADOR";
+  const papel = (req.headers.get("x-user-papel") ?? "TRANSPORTADOR") as Papel;
   const podeCriarUsuarios = req.headers.get("x-user-pode-criar-usuarios") === "1";
   if (!podeGerenciarUsuariosPorPapel(papel, podeCriarUsuarios)) {
     return NextResponse.json({ erro: "Sem permissão" }, { status: 403 });

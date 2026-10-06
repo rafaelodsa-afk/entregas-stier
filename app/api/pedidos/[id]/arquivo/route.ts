@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { podeVerTudo } from "@/lib/auth";
+import { podeVerTudo, type Papel } from "@/lib/auth";
 import { gerarUrlVisualizacao } from "@/lib/r2";
 
 // Mesma comparação tolerante usada no resto do sistema (espaço/maiúscula não
@@ -18,11 +18,7 @@ function mesmoTransportador(a: string, b: string) {
 // no máximo um ou dois arquivos. Agora a listagem só manda este endereço
 // curto, e a assinatura acontece apenas pra quem realmente clicar.
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
-  const papel = (req.headers.get("x-user-papel") ?? "TRANSPORTADOR") as
-    | "MASTER"
-    | "ADMIN"
-    | "ANALISTA"
-    | "TRANSPORTADOR";
+  const papel = (req.headers.get("x-user-papel") ?? "TRANSPORTADOR") as Papel;
   const transportadorSessao = decodeURIComponent(req.headers.get("x-user-transportador") ?? "");
 
   const tipo = req.nextUrl.searchParams.get("tipo");

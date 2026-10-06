@@ -14,6 +14,7 @@ enum Papel {
   MASTER // acesso principal, único, criado pelo seed
   ADMIN // administrador (pode ganhar permissão de gerenciar usuários)
   ANALISTA // acesso total exceto gerenciar usuários
+  ANALISTA_ROTAS // como o analista, mas também dá baixa em lote nos pedidos antigos
   TRANSPORTADOR // vê e mexe só nos próprios pedidos
 }
 

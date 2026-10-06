@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { hashPassword, podeGerenciarUsuariosPorPapel, senhaValida, MENSAGEM_REGRA_SENHA } from "@/lib/auth";
+import { hashPassword, podeGerenciarUsuariosPorPapel, senhaValida, MENSAGEM_REGRA_SENHA, type Papel } from "@/lib/auth";
 import { normalizarNomeTransportador } from "@/lib/transportador";
 
-const PAPEIS_CRIAVEIS = ["ADMIN", "ANALISTA", "TRANSPORTADOR"];
+const PAPEIS_CRIAVEIS = ["ADMIN", "ANALISTA", "ANALISTA_ROTAS", "TRANSPORTADOR"];
 const TIPOS_CONTA = ["TRANSPORTADOR", "MOTORISTA"];
 
 // Motorista da frota própria é vinculado pelo nome da pessoa (pode trocar de
@@ -12,11 +12,7 @@ const TIPOS_CONTA = ["TRANSPORTADOR", "MOTORISTA"];
 const PREFIXO_FROTA_PROPRIA = "Frota Própria – ";
 
 function sessaoDoHeader(req: NextRequest) {
-  const papel = (req.headers.get("x-user-papel") ?? "TRANSPORTADOR") as
-    | "MASTER"
-    | "ADMIN"
-    | "ANALISTA"
-    | "TRANSPORTADOR";
+  const papel = (req.headers.get("x-user-papel") ?? "TRANSPORTADOR") as Papel;
   const podeCriarUsuarios = req.headers.get("x-user-pode-criar-usuarios") === "1";
   return { papel, podeCriarUsuarios };
 }

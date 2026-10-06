@@ -16,10 +16,15 @@ export async function verifyPassword(senha: string, hash: string): Promise<boole
   return bcrypt.compare(senha, hash);
 }
 
+// Fonte única dos papéis. As rotas e telas importam este tipo em vez de
+// repetir a lista: quando entra um papel novo, só este arquivo muda e o
+// TypeScript aponta qualquer lugar que precise de ajuste.
+export type Papel = "MASTER" | "ADMIN" | "ANALISTA" | "ANALISTA_ROTAS" | "TRANSPORTADOR";
+
 export type SessionPayload = {
   userId: string;
   username: string;
-  papel: "MASTER" | "ADMIN" | "ANALISTA" | "TRANSPORTADOR";
+  papel: Papel;
   nome: string;
   transportadorNome: string | null;
   podeCriarUsuarios: boolean;
@@ -81,12 +86,13 @@ export async function verifySession(token: string): Promise<SessionPayload | nul
 export const COOKIE_NAME = NOME_COOKIE;
 
 // Papéis que enxergam todos os pedidos (não só os do próprio transportador).
-export function podeVerTudo(papel: SessionPayload["papel"]): boolean {
-  return papel === "MASTER" || papel === "ADMIN" || papel === "ANALISTA";
+export function podeVerTudo(papel: Papel): boolean {
+  return papel === "MASTER" || papel === "ADMIN" || papel === "ANALISTA" || papel === "ANALISTA_ROTAS";
 }
 
 // Papéis que podem gerenciar usuários (criar/desativar acessos).
-export function podeGerenciarUsuariosPorPapel(papel: SessionPayload["papel"], podeCriarUsuarios: boolean): boolean {
+// ANALISTA_ROTAS fica de fora de propósito: é a única coisa que ele não faz.
+export function podeGerenciarUsuariosPorPapel(papel: Papel, podeCriarUsuarios: boolean): boolean {
   if (papel === "MASTER") return true;
   if (papel === "ADMIN") return podeCriarUsuarios;
   return false;
@@ -94,12 +100,14 @@ export function podeGerenciarUsuariosPorPapel(papel: SessionPayload["papel"], po
 
 // Excluir um mês inteiro de pedidos é irreversível e em lote — mais
 // restrito que as outras exclusões do sistema (que incluem ANALISTA).
-export function podeExcluirMes(papel: SessionPayload["papel"]): boolean {
+export function podeExcluirMes(papel: Papel): boolean {
   return papel === "MASTER" || papel === "ADMIN";
 }
 
 // Marcar um pedido legado como entregue sem canhoto pula uma trava
-// importante do fluxo normal — só master/admin, nunca analista.
-export function podeFinalizarSemCanhoto(papel: SessionPayload["papel"]): boolean {
-  return papel === "MASTER" || papel === "ADMIN";
+// importante do fluxo normal. O analista comum continua de fora; o
+// ANALISTA_ROTAS entra porque dar baixa em vários pedidos antigos é
+// justamente a função dele.
+export function podeFinalizarSemCanhoto(papel: Papel): boolean {
+  return papel === "MASTER" || papel === "ADMIN" || papel === "ANALISTA_ROTAS";
 }

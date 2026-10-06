@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { apagarArquivosR2 } from "@/lib/r2";
 import { prisma } from "@/lib/db";
-import { podeExcluirMes } from "@/lib/auth";
+import { podeExcluirMes, type Papel } from "@/lib/auth";
 import { resumoDoMes } from "@/lib/resumoMes";
 
 const REGEX_MES = /^\d{4}-\d{2}$/;
@@ -12,11 +12,7 @@ const REGEX_MES = /^\d{4}-\d{2}$/;
 // mês de confirmação enviado bater exatamente com o mês pedido (a tela já
 // trava isso no cliente, mas confia-se pouco: confere de novo aqui).
 export async function POST(req: NextRequest) {
-  const papel = (req.headers.get("x-user-papel") ?? "TRANSPORTADOR") as
-    | "MASTER"
-    | "ADMIN"
-    | "ANALISTA"
-    | "TRANSPORTADOR";
+  const papel = (req.headers.get("x-user-papel") ?? "TRANSPORTADOR") as Papel;
   if (!podeExcluirMes(papel)) {
     return NextResponse.json({ erro: "Sem permissão para excluir pedidos em lote" }, { status: 403 });
   }

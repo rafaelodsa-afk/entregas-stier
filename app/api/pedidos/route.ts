@@ -1,14 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { podeVerTudo } from "@/lib/auth";
+import { podeVerTudo, type Papel } from "@/lib/auth";
 import { criarOuReatribuirPedido } from "@/lib/pedidos";
 
 function papelDaSessao(req: NextRequest) {
-  return (req.headers.get("x-user-papel") ?? "TRANSPORTADOR") as
-    | "MASTER"
-    | "ADMIN"
-    | "ANALISTA"
-    | "TRANSPORTADOR";
+  return (req.headers.get("x-user-papel") ?? "TRANSPORTADOR") as Papel;
 }
 
 export async function GET(req: NextRequest) {

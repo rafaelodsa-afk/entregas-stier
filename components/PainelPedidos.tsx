@@ -9,6 +9,7 @@ import FiltroPeriodo from "@/components/FiltroPeriodo";
 import { enviarAcao, STATUS_SEM_CANHOTO } from "@/components/PedidoAcoes";
 import { LABEL_STATUS } from "@/lib/statusLabels";
 import { dataNoIntervalo } from "@/lib/filtroPeriodo";
+import { executarEmLote } from "@/lib/emLote";
 
 type Pedido = {
   id: string;
@@ -37,8 +38,28 @@ type Pedido = {
 // no filtro, nunca gravada em lugar nenhum.
 const CHAVE_ENTREGUE_SEM_COMPROVANTE = "ENTREGUE_SEM_COMPROVANTE";
 
-function chaveStatusFiltro(p: { statusEntrega: string; finalizadoSemCanhoto: boolean }) {
-  return p.statusEntrega === "ENTREGUE" && p.finalizadoSemCanhoto ? CHAVE_ENTREGUE_SEM_COMPROVANTE : p.statusEntrega;
+// Status em que o pedido já saiu do fluxo de entrega — o que NÃO está aqui
+// ainda é uma entrega em aberto pro sistema.
+const STATUS_FINALIZADOS = ["ENTREGUE", "CANCELADO", "DEVOLVIDO", "REENTREGA"];
+
+// Outra chave sintética: agrupa tudo que ainda está pendente de entrega no
+// sistema, INDEPENDENTE do que a planilha diz. É o caso dos pedidos que vêm
+// como "Entregue" na planilha mas seguem sem canhoto aqui (o status
+// AGUARDANDO_CANHOTO, e também os que a planilha baixou antes do
+// transportador sequer aceitar/sair pra rota) — justamente os que somem de
+// vista quando a pessoa confia só na coluna da planilha.
+const CHAVE_PENDENTES = "PENDENTES_DE_ENTREGA";
+
+// Devolve TODAS as chaves de filtro que o pedido atende (um pedido pendente
+// responde pelo próprio status e também por "Entregas pendentes"). "Entregue"
+// e "Entregue (sem comprovante)" seguem mutuamente exclusivos, como antes.
+function chavesStatusFiltro(p: { statusEntrega: string; finalizadoSemCanhoto: boolean }) {
+  const chaves =
+    p.statusEntrega === "ENTREGUE" && p.finalizadoSemCanhoto
+      ? [CHAVE_ENTREGUE_SEM_COMPROVANTE]
+      : [p.statusEntrega];
+  if (!STATUS_FINALIZADOS.includes(p.statusEntrega)) chaves.push(CHAVE_PENDENTES);
+  return chaves;
 }
 
 // Quantas linhas a tabela desenha por vez. Os filtros, a busca e os totais
@@ -51,6 +72,8 @@ const OPCOES_STATUS = (() => {
   const opcoes = Object.entries(LABEL_STATUS).map(([valor, rotulo]) => ({ valor, rotulo }));
   const indiceEntregue = opcoes.findIndex((o) => o.valor === "ENTREGUE");
   opcoes.splice(indiceEntregue + 1, 0, { valor: CHAVE_ENTREGUE_SEM_COMPROVANTE, rotulo: "Entregue (sem comprovante)" });
+  // Primeiro da lista: é o atalho mais usado pra achar o que ficou pra trás.
+  opcoes.unshift({ valor: CHAVE_PENDENTES, rotulo: "Entregas pendentes (inclui baixadas na planilha)" });
   return opcoes;
 })();
 
@@ -82,6 +105,7 @@ export default function PainelPedidos({
   const [processandoAceitar, setProcessandoAceitar] = useState(false);
   const [erroLote, setErroLote] = useState("");
   const [limite, setLimite] = useState(LOTE_LINHAS);
+  const [progresso, setProgresso] = useState<{ feitos: number; total: number } | null>(null);
 
   const opcoesTransportador = useMemo(
     () => transportadores.map((t) => ({ valor: t, rotulo: t.toUpperCase() })),
@@ -91,7 +115,7 @@ export default function PainelPedidos({
   const buscaNormalizada = busca.trim().toLowerCase();
   const filtrados = pedidos.filter((p) => {
     if (apenasAlertaProblema && !p.alertaProblema) return false;
-    if (statusFiltro.size > 0 && !statusFiltro.has(chaveStatusFiltro(p))) return false;
+    if (statusFiltro.size > 0 && !chavesStatusFiltro(p).some((c) => statusFiltro.has(c))) return false;
     if (transportadorFiltro.size > 0 && !transportadorFiltro.has(p.transportador)) return false;
     if (!dataNoIntervalo(p.dataPedido, dataInicial, dataFinal)) return false;
     if (buscaNormalizada) {
@@ -131,10 +155,16 @@ export default function PainelPedidos({
     : [];
   const idsElegiveisAceitar = new Set(elegiveisAceitar.map((p) => p.id));
   const idsElegiveisSemComprovante = new Set(elegiveisSemComprovante.map((p) => p.id));
-  // União das duas — usada só pra decidir em quais linhas mostrar checkbox
-  // e o "selecionar todos"; cada ação em massa filtra o próprio subconjunto
-  // elegível na hora de agir.
-  const idsElegiveisLote = new Set([...idsElegiveisAceitar, ...idsElegiveisSemComprovante]);
+  // TODA linha filtrada pode ser marcada — antes a caixinha só aparecia nas
+  // que servissem pra alguma ação em lote, então quem não tinha permissão de
+  // dar baixa (analista comum) só conseguia marcar os "Aguardando aceite", e
+  // pedido já entregue nunca podia ser marcado nem pra exportar.
+  //
+  // Quem decide o que cada ação faz continua sendo o subconjunto elegível de
+  // cada uma (idsElegiveisAceitar / idsElegiveisSemComprovante), calculados
+  // acima e aplicados na hora de agir: marcar um pedido que não serve pra
+  // uma ação simplesmente não o inclui nela.
+  const idsElegiveisLote = new Set(filtrados.map((p) => p.id));
 
   const algumSelecionadoAceitar = [...selecionados].some((id) => idsElegiveisAceitar.has(id));
   const algumSelecionadoSemComprovante = podeFinalizarLegado && [...selecionados].some((id) => idsElegiveisSemComprovante.has(id));
@@ -162,18 +192,23 @@ export default function PainelPedidos({
     }
     setProcessandoAceitar(true);
     setErroLote("");
+    setProgresso({ feitos: 0, total: ids.length });
     try {
-      const resultados = await Promise.allSettled(
-        ids.map((id) => enviarAcao(id, { acao: "aceitarPeloTransportador" }))
+      const { falhas } = await executarEmLote(
+        ids,
+        (id) => enviarAcao(id, { acao: "aceitarPeloTransportador" }),
+        { onProgresso: (feitos, total) => setProgresso({ feitos, total }) }
       );
-      const falhas = resultados.filter((r) => r.status === "rejected").length;
-      if (falhas > 0) {
-        setErroLote(`${falhas} de ${ids.length} pedido(s) não puderam ser aceitos. Tente novamente.`);
+      if (falhas.length > 0) {
+        setErroLote(
+          `${falhas.length} de ${ids.length} pedido(s) não puderam ser aceitos (nº ${falhas.slice(0, 10).join(", ")}${falhas.length > 10 ? "..." : ""}). Os outros foram aceitos.`
+        );
       }
       setSelecionados(new Set());
       router.refresh();
     } finally {
       setProcessandoAceitar(false);
+      setProgresso(null);
     }
   }
 
@@ -194,18 +229,23 @@ export default function PainelPedidos({
     }
     setProcessandoLote(true);
     setErroLote("");
+    setProgresso({ feitos: 0, total: ids.length });
     try {
-      const resultados = await Promise.allSettled(
-        ids.map((id) => enviarAcao(id, { acao: "finalizarSemComprovante", justificativa: justificativa.trim() }))
+      const { falhas } = await executarEmLote(
+        ids,
+        (id) => enviarAcao(id, { acao: "finalizarSemComprovante", justificativa: justificativa.trim() }),
+        { onProgresso: (feitos, total) => setProgresso({ feitos, total }) }
       );
-      const falhas = resultados.filter((r) => r.status === "rejected").length;
-      if (falhas > 0) {
-        setErroLote(`${falhas} de ${ids.length} pedido(s) não puderam ser atualizados. Tente novamente.`);
+      if (falhas.length > 0) {
+        setErroLote(
+          `${falhas.length} de ${ids.length} pedido(s) não puderam ser atualizados (nº ${falhas.slice(0, 10).join(", ")}${falhas.length > 10 ? "..." : ""}). Os outros foram baixados.`
+        );
       }
       setSelecionados(new Set());
       router.refresh();
     } finally {
       setProcessandoLote(false);
+      setProgresso(null);
     }
   }
 
@@ -255,7 +295,7 @@ export default function PainelPedidos({
               checked={[...idsElegiveisLote].every((id) => selecionados.has(id))}
               onChange={alternarSelecionarTodos}
             />
-            Selecionar todos os elegíveis ({idsElegiveisLote.size})
+            Selecionar todos os {idsElegiveisLote.size} pedidos filtrados
           </label>
         </div>
       )}
@@ -263,6 +303,11 @@ export default function PainelPedidos({
       {selecionados.size > 0 && (
         <div className="lote-barra">
           <span>{selecionados.size} selecionado(s)</span>
+          {progresso && (
+            <span className="muted">
+              processando {progresso.feitos} de {progresso.total}...
+            </span>
+          )}
           {algumSelecionadoAceitar && (
             <button disabled={processandoAceitar} onClick={aceitarPeloTransportadorLote}>
               {processandoAceitar ? "Processando..." : `Aceitar pelo transportador (${[...selecionados].filter((id) => idsElegiveisAceitar.has(id)).length})`}
@@ -272,6 +317,12 @@ export default function PainelPedidos({
             <button disabled={processandoLote} onClick={marcarSemComprovanteLote}>
               {processandoLote ? "Processando..." : `Marcar como entregue sem comprovante (${[...selecionados].filter((id) => idsElegiveisSemComprovante.has(id)).length})`}
             </button>
+          )}
+          {!algumSelecionadoAceitar && !algumSelecionadoSemComprovante && !progresso && (
+            <span className="muted">
+              Nenhuma ação em lote se aplica ao que está marcado (pedidos já entregues ou
+              cancelados, por exemplo) — a seleção segue valendo pra exportar.
+            </span>
           )}
           <button className="link-botao" onClick={() => setSelecionados(new Set())}>
             Limpar seleção

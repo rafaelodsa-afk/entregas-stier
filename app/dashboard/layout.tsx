@@ -71,6 +71,12 @@ export default async function DashboardLayout({ children }: { children: React.Re
           Acesso de analista — vê e atualiza pedidos normalmente; só não gerencia usuários.
         </div>
       )}
+      {sessao.papel === "ANALISTA_ROTAS" && (
+        <div className="somente-leitura-aviso">
+          Acesso de analista de rotas — vê e atualiza pedidos normalmente e pode dar baixa em
+          vários pedidos antigos de uma vez; só não gerencia usuários.
+        </div>
+      )}
       <main>{children}</main>
     </div>
   );

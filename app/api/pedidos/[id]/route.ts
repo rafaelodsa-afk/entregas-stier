@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { podeVerTudo, podeFinalizarSemCanhoto } from "@/lib/auth";
+import { podeVerTudo, podeFinalizarSemCanhoto, type Papel } from "@/lib/auth";
 import { geraPendenciaFinanceira } from "@/lib/pedidos";
 import { arquivoValido, apagarArquivosR2 } from "@/lib/r2";
 
@@ -32,11 +32,7 @@ const TRANSICOES_AVANCAR_STATUS: Record<string, string> = {
 };
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
-  const papel = (req.headers.get("x-user-papel") ?? "TRANSPORTADOR") as
-    | "MASTER"
-    | "ADMIN"
-    | "ANALISTA"
-    | "TRANSPORTADOR";
+  const papel = (req.headers.get("x-user-papel") ?? "TRANSPORTADOR") as Papel;
   const transportadorSessao = decodeURIComponent(req.headers.get("x-user-transportador") ?? "");
   const nomeUsuario = decodeURIComponent(req.headers.get("x-user-nome") ?? "sistema");
 
@@ -283,11 +279,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 }
 
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
-  const papel = (req.headers.get("x-user-papel") ?? "TRANSPORTADOR") as
-    | "MASTER"
-    | "ADMIN"
-    | "ANALISTA"
-    | "TRANSPORTADOR";
+  const papel = (req.headers.get("x-user-papel") ?? "TRANSPORTADOR") as Papel;
   if (!podeVerTudo(papel)) {
     return NextResponse.json({ erro: "Sem permissão para excluir pedidos" }, { status: 403 });
   }

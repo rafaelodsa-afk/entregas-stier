@@ -1,16 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { podeVerTudo } from "@/lib/auth";
+import { podeVerTudo, type Papel } from "@/lib/auth";
 import { gerarZipDoMes } from "@/lib/exportarMes";
 
 const REGEX_MES = /^\d{4}-\d{2}$/;
 
 export async function POST(req: NextRequest) {
-  const papel = (req.headers.get("x-user-papel") ?? "TRANSPORTADOR") as
-    | "MASTER"
-    | "ADMIN"
-    | "ANALISTA"
-    | "TRANSPORTADOR";
+  const papel = (req.headers.get("x-user-papel") ?? "TRANSPORTADOR") as Papel;
   if (!podeVerTudo(papel)) {
     return NextResponse.json({ erro: "Sem permissão" }, { status: 403 });
   }
